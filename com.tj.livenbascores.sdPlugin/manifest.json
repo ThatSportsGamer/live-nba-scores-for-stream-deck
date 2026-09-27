@@ -1,0 +1,46 @@
+{
+    "Author": "T.J. Lauerman aka ThatSportsGamer",
+    "CodePath": "plugin.js",
+    "Description": "Shows live NBA, WNBA, and G League scores on your Stream Deck. Each key tracks one team — see the current score, quarter, and clock at a glance.",
+    "Name": "Live NBA Scores",
+    "UUID": "com.tj.livenbascores",
+    "Category": "Live Sports Scores",
+    "URL": "https://github.com/ThatSportsGamer/live-nba-scores-for-stream-deck",
+    "Icon": "imgs/plugin-icon",
+    "CategoryIcon": "imgs/category-icon",
+    "Version": "1.0.0.0",
+    "SDKVersion": 3,
+    "Software": {
+        "MinimumVersion": "6.9"
+    },
+    "OS": [
+        {
+            "Platform": "mac",
+            "MinimumVersion": "10.15"
+        },
+        {
+            "Platform": "windows",
+            "MinimumVersion": "10"
+        }
+    ],
+    "Nodejs": {
+        "Version": "20",
+        "Debug": "disabled"
+    },
+    "Actions": [
+        {
+            "Name": "Live NBA Scores",
+            "UUID": "com.tj.livenbascores.score",
+            "Icon": "imgs/action-icon",
+            "Tooltip": "Shows the live score for your chosen NBA, WNBA, or G League team. Updates every 30 seconds.",
+            "PropertyInspectorPath": "property-inspector.html",
+            "States": [
+                {
+                    "Image": "imgs/action-icon",
+                    "Title": ""
+                }
+            ],
+            "SupportedInMultiActions": false
+        }
+    ]
+}

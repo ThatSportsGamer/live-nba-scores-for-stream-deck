@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Basketball Score Settings</title>
+    <style>
+        :root {
+            --bg:        #1e1e1e;
+            --surface:   #2c2c2c;
+            --border:    #444;
+            --text:      #d4d4d4;
+            --accent:    #1D428A; /* NBA blue */
+            --accent-hi: #F58426; /* basketball orange */
+            --radius:    6px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 13px;
+            padding: 12px;
+        }
+
+        h2 {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: #fff;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 4px;
+            color: #aaa;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .field { margin-bottom: 10px; }
+
+        /* ── Search ── */
+        .search-wrap { position: relative; }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 7px 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        input[type="text"]::placeholder { color: #666; }
+        input[type="text"]:focus { outline: none; border-color: var(--accent-hi); }
+
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0; right: 0;
+            background: var(--surface);
+            border: 1px solid var(--accent-hi);
+            border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+        }
+
+        .autocomplete-list .ac-item {
+            padding: 7px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .autocomplete-list .ac-item .ac-league {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .04em;
+            color: #888;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 3px;
+            padding: 1px 5px;
+            flex-shrink: 0;
+        }
+
+        .autocomplete-list .ac-item:last-child { border-bottom: none; }
+        .autocomplete-list .ac-item:hover,
+        .autocomplete-list .ac-item.active { background: var(--accent); color: #fff; }
+        .autocomplete-list .ac-item:hover .ac-league,
+        .autocomplete-list .ac-item.active .ac-league { color: #fff; border-color: rgba(255,255,255,.4); }
+
+        /* ── Divider ── */
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0;
+            color: #555;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ── Selects ── */
+        select {
+            width: 100%;
+            padding: 7px 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        select:focus { outline: none; border-color: var(--accent-hi); }
+
+        /* ── Selected team banner ── */
+        .selected-team {
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: var(--surface);
+            border-left: 3px solid var(--accent-hi);
+            border-radius: var(--radius);
+            font-size: 12px;
+            color: #ccc;
+            display: none;
+        }
+
+        .selected-team span { font-weight: bold; color: #fff; }
+
+        /* ── Info box ── */
+        .info-box {
+            margin-top: 14px;
+            padding: 9px 11px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-hi);
+            border-radius: var(--radius);
+            font-size: 11px;
+            color: #999;
+            line-height: 1.5;
+        }
+
+        .info-box strong { color: var(--text); }
+
+        /* ── Background color ── */
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent-hi);
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            margin: 0;
+            text-transform: none;
+            letter-spacing: normal;
+            font-size: 12px;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .bg-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .bg-controls.disabled { opacity: .4; pointer-events: none; }
+
+        input[type="color"] {
+            width: 34px;
+            height: 28px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-hi);
+            cursor: pointer;
+        }
+
+        .opacity-value {
+            width: 34px;
+            text-align: right;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .bg-hint {
+            margin-top: 6px;
+            font-size: 10.5px;
+            color: #777;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🏀 Live Basketball Scores</h2>
+
+<!-- ── Search ── -->
+<div class="field">
+    <label for="searchBox">Search — any team, any league</label>
+    <div class="search-wrap">
+        <input type="text" id="searchBox" placeholder="e.g. Knicks, Liberty, Westchester…" autocomplete="off"/>
+        <div class="autocomplete-list" id="autocompleteList"></div>
+    </div>
+</div>
+
+<div class="or-divider">or browse</div>
+
+<!-- ── League + Division/Conference + Team dropdowns ── -->
+<div class="field">
+    <label for="leagueSelect">League</label>
+    <select id="leagueSelect">
+        <option value="nba">NBA</option>
+        <option value="wnba">WNBA</option>
+        <option value="gleague">G League</option>
+    </select>
+</div>
+
+<div class="field">
+    <label for="divSelect" id="divLabel">Division</label>
+    <select id="divSelect">
+        <option value="">All Divisions</option>
+    </select>
+</div>
+
+<div class="field">
+    <label for="teamSelect">Team</label>
+    <select id="teamSelect">
+        <option value="">— Select a team —</option>
+    </select>
+</div>
+
+<div class="selected-team" id="selectedTeamInfo">
+    Tracking: <span id="selectedTeamName"></span>
+</div>
+
+<div class="field" style="margin-top: 16px;">
+    <label for="linkType">Key Press Opens</label>
+    <select id="linkType">
+        <option value="gamecast">ESPN Gamecast (free)</option>
+        <option value="custom">Custom Link</option>
+    </select>
+</div>
+
+<div class="field" id="customLinkField" style="display: none;">
+    <label for="customLinkInput">Custom URL</label>
+    <input type="text" id="customLinkInput" placeholder="e.g. https://www.msgnetworks.com/live" autocomplete="off"/>
+    <div class="bg-hint">Opens ESPN Gamecast until the game actually starts, then this URL instead — handy for a regional sports network's live-game page or any other link you'd rather use. Keeps opening it for 30 minutes after the final buzzer, then reverts to Gamecast.</div>
+</div>
+
+<div class="field" style="margin-top: 16px;">
+    <label>Key Background</label>
+    <div class="checkbox-row">
+        <input type="checkbox" id="bgEnabled"/>
+        <label for="bgEnabled">Use a custom background color</label>
+    </div>
+    <div class="bg-controls disabled" id="bgControls">
+        <input type="color" id="bgColorInput" value="#000000"/>
+        <input type="range" id="bgOpacityInput" min="10" max="100" value="100"/>
+        <span class="opacity-value" id="bgOpacityValue">100%</span>
+    </div>
+    <div class="bg-hint">Score and status text is white (or gold/red) — lighter or brighter backgrounds can make it harder to read.</div>
+</div>
+
+<div class="info-box">
+    <strong>How it works:</strong><br>
+    • Scores refresh every <strong>30 seconds</strong> (every 15 in the last 2:00 of the 4th quarter and overtime)<br>
+    • Shows score + quarter/clock during live games — the clock turns red in crunch time<br>
+    • The key flashes in the leading team's color on every <strong>lead change</strong><br>
+    • Shows matchup and tip-off time before the game, and the next game on off days<br>
+    • Shows Final / Final/OT when the game ends<br>
+    • Covers NBA, WNBA, and G League — searching an NBA team also finds its G League affiliate
+</div>
+
+<script>
+    // ── Team data ─────────────────────────────────────────────────────────────
+    // value = ESPN team id (unique within a league). Static first-paint /
+    // offline fallback — replaced per league by the live list from plugin.js.
+    var TEAMS = [
+        // ── NBA — Atlantic ──
+        { value: "2",      abbr: "BOS",  name: "Boston Celtics",                  league: "nba", division: "Atlantic" },
+        { value: "17",     abbr: "BKN",  name: "Brooklyn Nets",                   league: "nba", division: "Atlantic" },
+        { value: "18",     abbr: "NY",   name: "New York Knicks",                 league: "nba", division: "Atlantic" },
+        { value: "20",     abbr: "PHI",  name: "Philadelphia 76ers",              league: "nba", division: "Atlantic" },
+        { value: "28",     abbr: "TOR",  name: "Toronto Raptors",                 league: "nba", division: "Atlantic" },
+        // ── NBA — Central ──
+        { value: "4",      abbr: "CHI",  name: "Chicago Bulls",                   league: "nba", division: "Central" },
+        { value: "5",      abbr: "CLE",  name: "Cleveland Cavaliers",             league: "nba", division: "Central" },
+        { value: "8",      abbr: "DET",  name: "Detroit Pistons",                 league: "nba", division: "Central" },
+        { value: "11",     abbr: "IND",  name: "Indiana Pacers",                  league: "nba", division: "Central" },
+        { value: "15",     abbr: "MIL",  name: "Milwaukee Bucks",                 league: "nba", division: "Central" },
+        // ── NBA — Southeast ──
+        { value: "1",      abbr: "ATL",  name: "Atlanta Hawks",                   league: "nba", division: "Southeast" },
+        { value: "30",     abbr: "CHA",  name: "Charlotte Hornets",               league: "nba", division: "Southeast" },
+        { value: "14",     abbr: "MIA",  name: "Miami Heat",                      league: "nba", division: "Southeast" },
+        { value: "19",     abbr: "ORL",  name: "Orlando Magic",                   league: "nba", division: "Southeast" },
+        { value: "27",     abbr: "WSH",  name: "Washington Wizards",              league: "nba", division: "Southeast" },
+        // ── NBA — Northwest ──
+        { value: "7",      abbr: "DEN",  name: "Denver Nuggets",                  league: "nba", division: "Northwest" },
+        { value: "16",     abbr: "MIN",  name: "Minnesota Timberwolves",          league: "nba", division: "Northwest" },
+        { value: "25",     abbr: "OKC",  name: "Oklahoma City Thunder",           league: "nba", division: "Northwest" },
+        { value: "22",     abbr: "POR",  name: "Portland Trail Blazers",          league: "nba", division: "Northwest" },
+        { value: "26",     abbr: "UTA",  name: "Utah Jazz",                       league: "nba", division: "Northwest" },
+        // ── NBA — Pacific ──
+        { value: "9",      abbr: "GS",   name: "Golden State Warriors",           league: "nba", division: "Pacific" },
+        { value: "12",     abbr: "LAC",  name: "LA Clippers",                     league: "nba", division: "Pacific" },
+        { value: "13",     abbr: "LAL",  name: "Los Angeles Lakers",              league: "nba", division: "Pacific" },
+        { value: "21",     abbr: "PHX",  name: "Phoenix Suns",                    league: "nba", division: "Pacific" },
+        { value: "23",     abbr: "SAC",  name: "Sacramento Kings",                league: "nba", division: "Pacific" },
+        // ── NBA — Southwest ──
+        { value: "6",      abbr: "DAL",  name: "Dallas Mavericks",                league: "nba", division: "Southwest" },
+        { value: "10",     abbr: "HOU",  name: "Houston Rockets",                 league: "nba", division: "Southwest" },
+        { value: "29",     abbr: "MEM",  name: "Memphis Grizzlies",               league: "nba", division: "Southwest" },
+        { value: "3",      abbr: "NO",   name: "New Orleans Pelicans",            league: "nba", division: "Southwest" },
+        { value: "24",     abbr: "SA",   name: "San Antonio Spurs",               league: "nba", division: "Southwest" },
+
+        // ── WNBA — Eastern ──
+        { value: "20",     abbr: "ATL",  name: "Atlanta Dream",                   league: "wnba", division: "Eastern" },
+        { value: "19",     abbr: "CHI",  name: "Chicago Sky",                     league: "wnba", division: "Eastern" },
+        { value: "18",     abbr: "CON",  name: "Connecticut Sun",                 league: "wnba", division: "Eastern" },
+        { value: "5",      abbr: "IND",  name: "Indiana Fever",                   league: "wnba", division: "Eastern" },
+        { value: "9",      abbr: "NY",   name: "New York Liberty",                league: "wnba", division: "Eastern" },
+        { value: "131935", abbr: "TOR",  name: "Toronto Tempo",                   league: "wnba", division: "Eastern" },
+        { value: "16",     abbr: "WSH",  name: "Washington Mystics",              league: "wnba", division: "Eastern" },
+        // ── WNBA — Western ──
+        { value: "3",      abbr: "DAL",  name: "Dallas Wings",                    league: "wnba", division: "Western" },
+        { value: "129689", abbr: "GS",   name: "Golden State Valkyries",          league: "wnba", division: "Western" },
+        { value: "17",     abbr: "LV",   name: "Las Vegas Aces",                  league: "wnba", division: "Western" },
+        { value: "6",      abbr: "LA",   name: "Los Angeles Sparks",              league: "wnba", division: "Western" },
+        { value: "8",      abbr: "MIN",  name: "Minnesota Lynx",                  league: "wnba", division: "Western" },
+        { value: "11",     abbr: "PHX",  name: "Phoenix Mercury",                 league: "wnba", division: "Western" },
+        { value: "132052", abbr: "POR",  name: "Portland Fire",                   league: "wnba", division: "Western" },
+        { value: "14",     abbr: "SEA",  name: "Seattle Storm",                   league: "wnba", division: "Western" },
+
+        // ── G League — Eastern ──
+        { value: "4",      abbr: "CAP",  name: "Capital City Go-Go",              league: "gleague", division: "Eastern" },
+        { value: "3",      abbr: "CLC",  name: "Cleveland Charge",                league: "gleague", division: "Eastern" },
+        { value: "28",     abbr: "CPS",  name: "College Park Skyhawks",           league: "gleague", division: "Eastern" },
+        { value: "5",      abbr: "DEL",  name: "Delaware Blue Coats",             league: "gleague", division: "Eastern" },
+        { value: "8",      abbr: "GRD",  name: "Grand Rapids Gold",               league: "gleague", division: "Eastern" },
+        { value: "9",      abbr: "GBO",  name: "Greensboro Swarm",                league: "gleague", division: "Eastern" },
+        { value: "6",      abbr: "LAK",  name: "Laketown Squadron",               league: "gleague", division: "Eastern" },
+        { value: "12",     abbr: "LIN",  name: "Long Island Nets",                league: "gleague", division: "Eastern" },
+        { value: "13",     abbr: "MNE",  name: "Maine Celtics",                   league: "gleague", division: "Eastern" },
+        { value: "15",     abbr: "MCC",  name: "Motor City Cruise",               league: "gleague", division: "Eastern" },
+        { value: "7",      abbr: "NOB",  name: "Noblesville Boom",                league: "gleague", division: "Eastern" },
+        { value: "11",     abbr: "OSC",  name: "Osceola Magic",                   league: "gleague", division: "Eastern" },
+        { value: "17",     abbr: "RAP",  name: "Raptors 905",                     league: "gleague", division: "Eastern" },
+        { value: "25",     abbr: "WES",  name: "Westchester Knicks",              league: "gleague", division: "Eastern" },
+        { value: "26",     abbr: "WCB",  name: "Windy City Bulls",                league: "gleague", division: "Eastern" },
+        { value: "27",     abbr: "WIS",  name: "Wisconsin Herd",                  league: "gleague", division: "Eastern" },
+        // ── G League — Western ──
+        { value: "2",      abbr: "AUS",  name: "Austin Spurs",                    league: "gleague", division: "Western" },
+        { value: "22",     abbr: "CVL",  name: "Coachella Valley Lakers",         league: "gleague", division: "Western" },
+        { value: "10",     abbr: "IWA",  name: "Iowa Wolves",                     league: "gleague", division: "Western" },
+        { value: "14",     abbr: "MHU",  name: "Memphis Hustle",                  league: "gleague", division: "Western" },
+        { value: "124612", abbr: "MXC",  name: "Mexico City Capitanes",           league: "gleague", division: "Western" },
+        { value: "16",     abbr: "OKL",  name: "Oklahoma City Blue",              league: "gleague", division: "Western" },
+        { value: "18",     abbr: "RGV",  name: "Rio Grande Valley Vipers",        league: "gleague", division: "Western" },
+        { value: "128019", abbr: "RCR",  name: "Rip City Remix",                  league: "gleague", division: "Western" },
+        { value: "19",     abbr: "SLC",  name: "Salt Lake City Stars",            league: "gleague", division: "Western" },
+        { value: "1",      abbr: "SAN",  name: "San Diego Clippers",              league: "gleague", division: "Western" },
+        { value: "20",     abbr: "SCW",  name: "Santa Cruz Warriors",             league: "gleague", division: "Western" },
+        { value: "21",     abbr: "SXF",  name: "Sioux Falls Skyforce",            league: "gleague", division: "Western" },
+        { value: "23",     abbr: "STO",  name: "Stockton Kings",                  league: "gleague", division: "Western" },
+        { value: "24",     abbr: "TEX",  name: "Texas Legends",                   league: "gleague", division: "Western" },
+        { value: "129713", abbr: "VAL",  name: "Valley Suns",                     league: "gleague", division: "Western" },
+    ];
+
+    var LEAGUE_LABEL = { nba: "NBA", wnba: "WNBA", gleague: "G League" };
+
+    // NBA browses by division; WNBA and G League have no divisions, so they
+    // browse by conference instead.
+    var GROUP_NOUN = { nba: "Division", wnba: "Conference", gleague: "Conference" };
+
+    // Preferred display order for known groups (sorting only — a new or
+    // renamed group from the live data still shows up, appended alphabetically).
+    var DIVISIONS = {
+        nba:     ["Atlantic", "Central", "Southeast", "Northwest", "Pacific", "Southwest"],
+        wnba:    ["Eastern", "Western"],
+        gleague: ["Eastern", "Western"],
+    };
+
+    function getDivisionsForLeague(league) {
+        var seen = {}, divs = [];
+        TEAMS.forEach(function(t) {
+            if (t.league === league && !seen[t.division]) { seen[t.division] = true; divs.push(t.division); }
+        });
+        var preferred = DIVISIONS[league] || [];
+        divs.sort(function(a, b) {
+            var ia = preferred.indexOf(a), ib = preferred.indexOf(b);
+            if (ia === -1 && ib === -1) return a.localeCompare(b);
+            if (ia === -1) return 1;
+            if (ib === -1) return -1;
+            return ia - ib;
+        });
+        return divs;
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    var websocket     = null;
+    var uuid          = null;
+    var actionContext = null;
+    var actionUUID    = null;
+    var savedTeamId   = null;
+    var savedLeague   = "nba";
+    var savedTeamAbbr = null;
+    var savedTeamName = null;
+
+    // Link + background settings — kept separate from the team fields so
+    // changing the team doesn't clobber them (and vice versa).
+    var currentSettings = { bgColor: null, bgOpacity: 100, linkType: 'gamecast', customLink: '' };
+
+    // NBA team (ESPN id) → G League affiliate (ESPN id). Hand-maintained —
+    // ESPN doesn't expose parent-club relationships. Affiliates move and
+    // rebrand in the offseason (2026: Birmingham → Laketown Squadron, South
+    // Bay → Coachella Valley Lakers); worth a check each September.
+    // Mexico City Capitanes are independent, so they're nobody's affiliate.
+    var AFFILIATES = {
+        '1':  '28',     // Hawks → College Park Skyhawks
+        '2':  '13',     // Celtics → Maine Celtics
+        '17': '12',     // Nets → Long Island Nets
+        '30': '9',      // Hornets → Greensboro Swarm
+        '4':  '26',     // Bulls → Windy City Bulls
+        '5':  '3',      // Cavaliers → Cleveland Charge
+        '6':  '24',     // Mavericks → Texas Legends
+        '7':  '8',      // Nuggets → Grand Rapids Gold
+        '8':  '15',     // Pistons → Motor City Cruise
+        '9':  '20',     // Warriors → Santa Cruz Warriors
+        '10': '18',     // Rockets → Rio Grande Valley Vipers
+        '11': '7',      // Pacers → Noblesville Boom
+        '12': '1',      // Clippers → San Diego Clippers
+        '13': '22',     // Lakers → Coachella Valley Lakers
+        '29': '14',     // Grizzlies → Memphis Hustle
+        '14': '21',     // Heat → Sioux Falls Skyforce
+        '15': '27',     // Bucks → Wisconsin Herd
+        '16': '10',     // Timberwolves → Iowa Wolves
+        '3':  '6',      // Pelicans → Laketown Squadron
+        '18': '25',     // Knicks → Westchester Knicks
+        '25': '16',     // Thunder → Oklahoma City Blue
+        '19': '11',     // Magic → Osceola Magic
+        '20': '5',      // 76ers → Delaware Blue Coats
+        '21': '129713', // Suns → Valley Suns
+        '22': '128019', // Trail Blazers → Rip City Remix
+        '23': '23',     // Kings → Stockton Kings
+        '24': '2',      // Spurs → Austin Spurs
+        '28': '17',     // Raptors → Raptors 905
+        '26': '19',     // Jazz → Salt Lake City Stars
+        '27': '4',      // Wizards → Capital City Go-Go
+    };
+
+    function findTeam(league, value) {
+        if (!value) return null;
+        return TEAMS.find(function(t) { return t.league === league && t.value === value; });
+    }
+
+    // ── Autocomplete (searches every league) ─────────────────────────────────
+    var acList      = document.getElementById('autocompleteList');
+    var searchBox   = document.getElementById('searchBox');
+    var activeIndex = -1;
+
+    // Direct matches lead in NBA → WNBA → G League order (explicit, since
+    // mergeLiveTeams() reorders TEAMS), and every matched NBA team pulls its
+    // G League affiliate in right behind it — so "Suns" finds Valley Suns,
+    // and "Pelicans" finds Laketown Squadron even though the names share
+    // nothing. No team is ever listed twice.
+    function getMatches(query) {
+        var q = query.toLowerCase().trim();
+        if (!q) return [];
+
+        var LEAGUE_RANK = { nba: 0, wnba: 1, gleague: 2 };
+        var direct = TEAMS
+            .map(function(t, i) { return { t: t, i: i }; })
+            .filter(function(x) {
+                return x.t.name.toLowerCase().indexOf(q) !== -1 ||
+                       x.t.abbr.toLowerCase().indexOf(q) !== -1;
+            })
+            .sort(function(a, b) { return (LEAGUE_RANK[a.t.league] - LEAGUE_RANK[b.t.league]) || (a.i - b.i); })
+            .map(function(x) { return x.t; });
+
+        var seen = {}, results = [];
+        function add(t) {
+            if (!t) return;
+            var key = t.league + ':' + t.value;
+            if (seen[key]) return;
+            seen[key] = true;
+            results.push(t);
+        }
+
+        direct.forEach(function(t) {
+            add(t);
+            if (t.league === 'nba' && AFFILIATES[t.value]) add(findTeam('gleague', AFFILIATES[t.value]));
+        });
+        return results;
+    }
+
+    function showAutocomplete() {
+        acList.innerHTML = '';
+        activeIndex = -1;
+
+        if (!searchBox.value.trim()) { acList.style.display = 'none'; return; }
+        var matches = getMatches(searchBox.value);
+        if (!matches.length) { acList.style.display = 'none'; return; }
+
+        matches.forEach(function(t) {
+            var div = document.createElement('div');
+            div.className = 'ac-item';
+
+            var nameSpan = document.createElement('span');
+            nameSpan.textContent = t.name;
+            div.appendChild(nameSpan);
+
+            var leagueSpan = document.createElement('span');
+            leagueSpan.className = 'ac-league';
+            leagueSpan.textContent = LEAGUE_LABEL[t.league];
+            div.appendChild(leagueSpan);
+
+            div.addEventListener('mousedown', function(e) {
+                e.preventDefault(); // keep focus off blur
+                selectTeam(t);
+            });
+            acList.appendChild(div);
+        });
+
+        acList.style.display = 'block';
+    }
+
+    function hideAutocomplete() {
+        acList.style.display = 'none';
+        activeIndex = -1;
+    }
+
+    function navigateAutocomplete(dir) {
+        var items = acList.querySelectorAll('.ac-item');
+        if (!items.length) return;
+        items[activeIndex] && items[activeIndex].classList.remove('active');
+        activeIndex = (activeIndex + dir + items.length) % items.length;
+        items[activeIndex].classList.add('active');
+        items[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+
+    searchBox.addEventListener('input', showAutocomplete);
+
+    searchBox.addEventListener('keydown', function(e) {
+        if (acList.style.display === 'none') return;
+        if (e.key === 'ArrowDown')  { e.preventDefault(); navigateAutocomplete(1); }
+        if (e.key === 'ArrowUp')    { e.preventDefault(); navigateAutocomplete(-1); }
+        if (e.key === 'Enter') {
+            var active = acList.querySelector('.ac-item.active');
+            if (active) {
+                e.preventDefault();
+                var idx     = Array.prototype.indexOf.call(acList.querySelectorAll('.ac-item'), active);
+                var matches = getMatches(searchBox.value);
+                if (matches[idx]) selectTeam(matches[idx]);
+            }
+        }
+        if (e.key === 'Escape') hideAutocomplete();
+    });
+
+    searchBox.addEventListener('blur', function() {
+        setTimeout(hideAutocomplete, 150);
+    });
+
+    // ── League → Division/Conference → Team dropdowns ─────────────────────────
+    function renderDivisionSelect() {
+        var league = document.getElementById('leagueSelect').value;
+        var noun   = GROUP_NOUN[league] || 'Division';
+        var divSel = document.getElementById('divSelect');
+
+        document.getElementById('divLabel').textContent = noun;
+        divSel.innerHTML = '<option value="">All ' + noun + 's</option>';
+        getDivisionsForLeague(league).forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            divSel.appendChild(opt);
+        });
+    }
+
+    function renderTeamSelect() {
+        var league  = document.getElementById('leagueSelect').value;
+        var div     = document.getElementById('divSelect').value;
+        var teamSel = document.getElementById('teamSelect');
+
+        var filtered = TEAMS
+            .filter(function(t) { return t.league === league && (!div || t.division === div); })
+            .sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+        teamSel.innerHTML = '<option value="">— Select a team —</option>';
+        filtered.forEach(function(t) {
+            var opt = document.createElement('option');
+            opt.value = t.value;
+            opt.setAttribute('data-abbr', t.abbr);
+            opt.setAttribute('data-league', t.league);
+            opt.textContent = t.name;
+            teamSel.appendChild(opt);
+        });
+
+        if (savedLeague === league && savedTeamId &&
+            filtered.some(function(t) { return t.value === savedTeamId; })) {
+            teamSel.value = savedTeamId;
+        }
+    }
+
+    // Puts the dropdowns, search box, and banner in sync with the saved team.
+    // Only touches the team UI — never the link/background settings.
+    function syncTeamUI() {
+        if (!savedTeamId) return;
+        var team = findTeam(savedLeague, savedTeamId);
+        if (!team) return;
+        searchBox.value = team.name;
+        document.getElementById('leagueSelect').value = team.league;
+        renderDivisionSelect();
+        document.getElementById('divSelect').value = team.division;
+        renderTeamSelect();
+        document.getElementById('teamSelect').value = team.value;
+        showSelectedTeamBanner(team.name, team.league);
+    }
+
+    // ── Shared selection handler ──────────────────────────────────────────────
+    function selectTeam(t) {
+        savedTeamId   = t.value;
+        savedLeague   = t.league;
+        savedTeamAbbr = t.abbr;
+        savedTeamName = t.name;
+        hideAutocomplete();
+        syncTeamUI();
+        saveSettings();
+    }
+
+    function showSelectedTeamBanner(name, league) {
+        var infoEl = document.getElementById('selectedTeamInfo');
+        var nameEl = document.getElementById('selectedTeamName');
+        if (name) {
+            nameEl.textContent   = name + ' (' + LEAGUE_LABEL[league] + ')';
+            infoEl.style.display = 'block';
+        } else {
+            infoEl.style.display = 'none';
+        }
+    }
+
+    // ── Settings ──────────────────────────────────────────────────────────────
+    function applySettings(settings) {
+        if (!settings) return;
+
+        currentSettings.bgColor    = settings.bgColor || null;
+        currentSettings.bgOpacity  = settings.bgOpacity != null ? settings.bgOpacity : 100;
+        currentSettings.linkType   = settings.linkType || 'gamecast';
+        currentSettings.customLink = settings.customLink || '';
+
+        if (settings.teamId) {
+            savedTeamId   = settings.teamId;
+            savedLeague   = settings.league || 'nba';
+            savedTeamAbbr = settings.teamAbbr || null;
+            savedTeamName = settings.teamName || null;
+            syncTeamUI();
+        }
+
+        var bgEnabled      = document.getElementById('bgEnabled');
+        var bgControls     = document.getElementById('bgControls');
+        var bgColor        = document.getElementById('bgColorInput');
+        var bgOpacity      = document.getElementById('bgOpacityInput');
+        var bgOpacityLabel = document.getElementById('bgOpacityValue');
+
+        bgEnabled.checked = !!currentSettings.bgColor;
+        bgColor.value     = currentSettings.bgColor || '#000000';
+        bgOpacity.value   = currentSettings.bgOpacity;
+        bgOpacityLabel.textContent = currentSettings.bgOpacity + '%';
+        bgControls.classList.toggle('disabled', !bgEnabled.checked);
+
+        document.getElementById('linkType').value = currentSettings.linkType;
+        document.getElementById('customLinkInput').value = currentSettings.customLink;
+        document.getElementById('customLinkField').style.display = currentSettings.linkType === 'custom' ? 'block' : 'none';
+    }
+
+    function saveSettings() {
+        if (!websocket) return;
+        var payload = {
+            league:     savedLeague,
+            teamId:     savedTeamId,
+            teamAbbr:   savedTeamAbbr,
+            teamName:   savedTeamName,
+            bgColor:    currentSettings.bgColor,
+            bgOpacity:  currentSettings.bgOpacity,
+            linkType:   currentSettings.linkType,
+            customLink: currentSettings.customLink
+        };
+        websocket.send(JSON.stringify({ event: 'setSettings',  context: uuid, payload: payload }));
+        websocket.send(JSON.stringify({ event: 'sendToPlugin', context: uuid, action: actionUUID, payload: { event: 'settingsChanged', settings: payload } }));
+    }
+
+    // ── Background color controls ─────────────────────────────────────────────
+    var bgEnabledEl      = document.getElementById('bgEnabled');
+    var bgControlsEl     = document.getElementById('bgControls');
+    var bgColorInputEl   = document.getElementById('bgColorInput');
+    var bgOpacityInputEl = document.getElementById('bgOpacityInput');
+    var bgOpacityValueEl = document.getElementById('bgOpacityValue');
+
+    bgEnabledEl.addEventListener('change', function() {
+        bgControlsEl.classList.toggle('disabled', !bgEnabledEl.checked);
+        currentSettings.bgColor = bgEnabledEl.checked ? bgColorInputEl.value : null;
+        saveSettings();
+    });
+
+    bgColorInputEl.addEventListener('input', function() {
+        if (!bgEnabledEl.checked) return;
+        currentSettings.bgColor = bgColorInputEl.value;
+        saveSettings();
+    });
+
+    bgOpacityInputEl.addEventListener('input', function() {
+        bgOpacityValueEl.textContent = bgOpacityInputEl.value + '%';
+        currentSettings.bgOpacity = parseInt(bgOpacityInputEl.value, 10);
+        if (bgEnabledEl.checked) saveSettings();
+    });
+
+    // ── Button-press link controls ────────────────────────────────────────────
+    var linkTypeEl      = document.getElementById('linkType');
+    var customLinkField = document.getElementById('customLinkField');
+    var customLinkEl    = document.getElementById('customLinkInput');
+
+    linkTypeEl.addEventListener('change', function() {
+        currentSettings.linkType = linkTypeEl.value;
+        customLinkField.style.display = linkTypeEl.value === 'custom' ? 'block' : 'none';
+        saveSettings();
+    });
+
+    customLinkEl.addEventListener('input', function() {
+        currentSettings.customLink = customLinkEl.value;
+        saveSettings();
+    });
+
+    // ── Live team data ────────────────────────────────────────────────────────
+    // plugin.js fetches each league's current team list from ESPN (no browser
+    // CORS limits there) and pushes it back; this replaces the static entries
+    // for any league that responded.
+    function mergeLiveTeams(liveTeams) {
+        var updated = [];
+        ['nba', 'wnba', 'gleague'].forEach(function(league) {
+            if (!liveTeams[league] || !liveTeams[league].length) return;
+            updated.push(league);
+            TEAMS = TEAMS.filter(function(t) { return t.league !== league; }).concat(
+                liveTeams[league].map(function(t) {
+                    return { value: t.value, abbr: t.abbr, name: t.name, league: league, division: t.division };
+                })
+            );
+        });
+        if (!updated.length) return;
+
+        // Re-render what's on screen so changes show up immediately
+        var currentDiv = document.getElementById('divSelect').value;
+        renderDivisionSelect();
+        if (currentDiv && getDivisionsForLeague(document.getElementById('leagueSelect').value).indexOf(currentDiv) !== -1) {
+            document.getElementById('divSelect').value = currentDiv;
+        }
+        renderTeamSelect();
+        // Only reopen the dropdown if the user is actively typing in the search box
+        if (document.activeElement === searchBox && searchBox.value.trim()) showAutocomplete();
+    }
+
+    // ── Dropdown change handlers ───────────────────────────────────────────────
+    document.getElementById('leagueSelect').addEventListener('change', function() {
+        savedTeamId = null;
+        searchBox.value = '';
+        renderDivisionSelect();
+        renderTeamSelect();
+        showSelectedTeamBanner('');
+    });
+
+    document.getElementById('divSelect').addEventListener('change', function() {
+        savedTeamId = null;
+        searchBox.value = '';
+        renderTeamSelect();
+        showSelectedTeamBanner('');
+    });
+
+    document.getElementById('teamSelect').addEventListener('change', function() {
+        var sel = document.getElementById('teamSelect');
+        if (!sel.value) return;
+        var opt = sel.options[sel.selectedIndex];
+        savedTeamId   = sel.value;
+        savedLeague   = opt.getAttribute('data-league');
+        savedTeamAbbr = opt.getAttribute('data-abbr');
+        savedTeamName = opt.text;
+        searchBox.value = savedTeamName;
+        showSelectedTeamBanner(savedTeamName, savedLeague);
+        saveSettings();
+    });
+
+    // ── Stream Deck WebSocket ─────────────────────────────────────────────────
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+        uuid = propertyInspectorUUID;
+        try {
+            var parsed = JSON.parse(actionInfo);
+            actionContext = parsed.context;
+            actionUUID    = parsed.action;
+        } catch(e) {}
+
+        websocket = new WebSocket('ws://127.0.0.1:' + port);
+
+        websocket.onopen = function() {
+            websocket.send(JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }));
+            websocket.send(JSON.stringify({ event: 'getSettings', context: propertyInspectorUUID }));
+            websocket.send(JSON.stringify({ event: 'sendToPlugin', context: propertyInspectorUUID, action: actionUUID, payload: { event: 'requestTeams' } }));
+        };
+
+        websocket.onmessage = function(evt) {
+            try {
+                var data = JSON.parse(evt.data);
+                if (data.event === 'didReceiveSettings') {
+                    applySettings(data.payload.settings);
+                } else if (data.event === 'sendToPropertyInspector' && data.payload && data.payload.event === 'teamsData') {
+                    mergeLiveTeams(data.payload.teams);
+                    // A live list may have arrived after the saved-settings sync
+                    // already ran off the static fallback — re-sync the team UI.
+                    syncTeamUI();
+                }
+            } catch(e) {}
+        };
+    }
+
+    // Initial render
+    renderDivisionSelect();
+    renderTeamSelect();
+</script>
+
+<div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #444; text-align: center; color: #666; font-size: 10px; line-height: 1.5;">
+    Created by T.J. Lauerman<br>aka ThatSportsGamer
+</div>
+
+</body>
+</html>
