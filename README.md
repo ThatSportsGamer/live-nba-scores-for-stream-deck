@@ -1,6 +1,6 @@
 # Live NBA Scores — Stream Deck Plugin
 
-![Live NBA Scores key states](assets/button-states.png)
+![Live NBA Scores in action](assets/LiveNBAScoresThumbnail.png)
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Each key tracks one team and updates automatically every 30 seconds.
 
@@ -65,6 +65,8 @@ The key loads your team's game within a few seconds and refreshes every 30 secon
 ---
 
 ## What the Key Shows
+
+![Live NBA Scores key states](assets/button-states.png)
 
 **Before the game:**
 ```
