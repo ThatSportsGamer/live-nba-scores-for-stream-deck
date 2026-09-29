@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Each key tracks one team and updates automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.0.0-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -45,9 +45,15 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 ## Installation
 
+**Elgato Marketplace (recommended)**
+
+1. Open **[Live NBA Scores on the Elgato Marketplace](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)** and install it from there
+2. The plugin will appear in the Stream Deck action picker under **Live NBA Scores**
+
+**Manual install**
+
 1. Download the latest **`Live NBA Scores.streamDeckPlugin`** from the [Releases](../../releases) page
 2. Double-click the file — Stream Deck will install it automatically
-3. The plugin will appear in the Stream Deck action picker under **Live NBA Scores**
 
 ---
 
