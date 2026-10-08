@@ -200,7 +200,7 @@ class SimpleWS extends events.EventEmitter {
 
 // ── Plugin state ──────────────────────────────────────────────────────────────
 const instances     = new Map(); // context -> settings ({ league, teamId, teamAbbr, teamName, linkType, customLink, bgColor, bgOpacity })
-const prevLeader    = new Map(); // context -> { eventId, leaderId } — last team that held the lead (ties don't reset it)
+const prevLeader    = new Map(); // context -> { eventId, leaderId, tied } — last team that held the lead (ties don't reset it) + whether the last poll was tied
 const prevState     = new Map(); // context -> last known game state string
 const flashing      = new Set(); // contexts mid-flash animation
 const refreshing    = new Set(); // contexts mid-async refresh
@@ -407,27 +407,40 @@ async function refreshButton(context) {
         const spacing = lines.some(l => typeof l === 'object') ? 1.2 : 1.4;
         log('→', JSON.stringify(lines));
 
-        // Lead-change flash. In basketball the score changes nearly every poll,
-        // so flashing on every basket (as the NFL/NHL plugins do per score)
-        // would mean a key that never stops flashing. Instead: flash in the new
-        // leader's color only when the lead actually flips from one team to the
-        // other. A tie doesn't count as a change and doesn't reset who last
-        // led, so "BOS leads → tie → NY leads" flashes once (for NY), and the
-        // first lead of the game (from 0-0) doesn't flash at all.
+        // Lead-change / tie flash. In basketball the score changes nearly every
+        // poll, so flashing on every basket would mean a key that never stops
+        // flashing. Instead, two moments:
+        //  • Lead change — the lead flips to the other team (a tie in between
+        //    doesn't reset who last led, so "BOS leads → tie → NY leads" counts,
+        //    but "BOS → tie → BOS" doesn't). Flash in the new leader's color,
+        //    then a "NY / LEAD +3" card.
+        //  • Tie — the game goes from a lead to level (not 0-0). Flash in the
+        //    tying team's color, then a "TIED / 88-88" card.
+        // Both work even when both teams score between polls, since they only
+        // compare who led before and after. The first lead of the game doesn't flash.
         if (game && game.state === 'live') {
             const leaderId = game.awayScore > game.homeScore ? game.awayId
                            : game.homeScore > game.awayScore ? game.homeId
                            : null;
+            const tied = !leaderId && (game.awayScore + game.homeScore) > 0;
             const prev = prevLeader.get(context);
             const samePrevGame = prev && prev.eventId === game.eventId;
-            if (leaderId) prevLeader.set(context, { eventId: game.eventId, leaderId });
-            else if (!samePrevGame) prevLeader.set(context, { eventId: game.eventId, leaderId: null });
+            const lastLeader = samePrevGame ? prev.leaderId : null;
+            prevLeader.set(context, { eventId: game.eventId, leaderId: leaderId || lastLeader, tied });
 
-            if (leaderId && samePrevGame && prev.leaderId && prev.leaderId !== leaderId) {
-                const color = flashColor(league, leaderId);
-                log('Lead change — flashing', color);
+            let event = null;
+            if (samePrevGame && leaderId && lastLeader && lastLeader !== leaderId) {
+                const margin = Math.abs(game.awayScore - game.homeScore);
+                const abbr   = leaderId === game.awayId ? game.awayAbbr : game.homeAbbr;
+                event = { color: flashColor(league, leaderId), card: cardLines(abbr, 'LEAD +' + margin), what: 'Lead change' };
+            } else if (samePrevGame && tied && !prev.tied && lastLeader) {
+                const tyingId = lastLeader === game.awayId ? game.homeId : game.awayId;
+                event = { color: flashColor(league, tyingId), card: cardLines('TIED', game.awayScore + '-' + game.homeScore), what: 'Tie' };
+            }
+            if (event) {
+                log(event.what, '— flashing', event.color, JSON.stringify(event.card));
                 refreshing.delete(context);
-                flashButton(context, color, lines, spacing, resolveBgColor(cfg)).catch(e => log('flashButton error:', e.message));
+                flashButton(context, event.color, lines, spacing, resolveBgColor(cfg), event.card).catch(e => log('flashButton error:', e.message));
                 return;
             }
         } else {
@@ -1027,16 +1040,32 @@ function setButton(context, lines, lineSpacing, bgColor, force) {
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-async function flashButton(context, color, lines, spacing, restColor = 'black') {
+// Card shown after the flash: top line white (team, or TIED), bottom line
+// yellow ("LEAD +3", or the tied score). Sized to fit; same look as the other
+// plugins' scoring cards.
+const CARD_MS = 3000;
+function cardLines(top, bottom) {
+    const fit = (t, max) => Math.min(max, Math.floor(62 / (t.length * 0.62)));
+    return [{ text: top, fs: fit(top, 24) }, { text: bottom, fs: fit(bottom, 16), color: '#FFD700' }];
+}
+
+// Flash: 5 solid blinks of the color with no text (2.0 s), then the card for
+// 3 s, then back to the score.
+async function flashButton(context, color, lines, spacing, restColor = 'black', card = null) {
     if (flashing.has(context)) return;
     flashing.add(context);
-    log('→ flash', color);
+    log('→ flash', color, card ? JSON.stringify(card) : '');
     try {
-        for (let i = 0; i < 4; i++) {
-            setButton(context, lines, spacing, color, true);
+        for (let i = 0; i < 5; i++) {
+            if (!instances.has(context)) return; // key was removed mid-flash
+            setButton(context, [''], spacing, color, true);
             await sleep(200);
-            setButton(context, lines, spacing, restColor, true);
+            setButton(context, [''], spacing, restColor, true);
             await sleep(200);
+        }
+        if (card && instances.has(context)) {
+            setButton(context, card, 1.3, 'black', true);
+            await sleep(CARD_MS);
         }
     } finally {
         flashing.delete(context);
