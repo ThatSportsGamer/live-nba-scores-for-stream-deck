@@ -15,7 +15,7 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 - **Browse by league** — pick a league, then a division (NBA) or conference (WNBA / G League), then a team
 - **Live scores** — shows away score, home score, quarter, and game clock while a game is in progress, plus Halftime and End of Quarter
 - **Crunch time** — the clock turns red in the last 2:00 of the 4th quarter and overtime, and the key refreshes every 15 seconds instead of 30
-- **Lead-change and tie flash** — when the lead flips, the key blinks in the new leader's color and shows a short card with the margin (NY / LEAD +3); when the game gets tied, it blinks in the tying team's color and shows TIED / 88-88 (basketball scores change too often to flash on every basket)
+- **Lead-change and tie flash** — when the lead flips, the key blinks in the new leader's color and shows a short card with the margin (NY / UP 3); when the game gets tied, it blinks in the tying team's color and shows TIED / 88-88 (basketball scores change too often to flash on every basket)
 - **End-of-game fireworks** — a short celebration in the winning team's colors when the game goes final
 - **Pre-game** — shows the matchup (e.g. `BOS @ NY`) and tip-off time
 - **Off days** — shows your team's next scheduled game (matchup, date, and time) instead of a dead-end "No Game"
@@ -31,7 +31,7 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 ## Recent Updates
 
 **v1.0.1.0**
-- Lead-change flash is now 5 solid blinks of the new leader's color with no text, then a 3-second card with the team and margin (e.g. NY / LEAD +3)
+- Lead-change flash is now 5 solid blinks of the new leader's color with no text, then a 3-second card with the team and margin (e.g. NY / UP 3)
 - New: when a game gets tied up, the key blinks in the tying team's color and shows a TIED / 88-88 card
 
 **v1.0.0.0**

@@ -413,7 +413,7 @@ async function refreshButton(context) {
         //  • Lead change — the lead flips to the other team (a tie in between
         //    doesn't reset who last led, so "BOS leads → tie → NY leads" counts,
         //    but "BOS → tie → BOS" doesn't). Flash in the new leader's color,
-        //    then a "NY / LEAD +3" card.
+        //    then a "NY / UP 3" card (the margin, not points scored).
         //  • Tie — the game goes from a lead to level (not 0-0). Flash in the
         //    tying team's color, then a "TIED / 88-88" card.
         // Both work even when both teams score between polls, since they only
@@ -432,7 +432,7 @@ async function refreshButton(context) {
             if (samePrevGame && leaderId && lastLeader && lastLeader !== leaderId) {
                 const margin = Math.abs(game.awayScore - game.homeScore);
                 const abbr   = leaderId === game.awayId ? game.awayAbbr : game.homeAbbr;
-                event = { color: flashColor(league, leaderId), card: cardLines(abbr, 'LEAD +' + margin), what: 'Lead change' };
+                event = { color: flashColor(league, leaderId), card: cardLines(abbr, 'UP ' + margin), what: 'Lead change' };
             } else if (samePrevGame && tied && !prev.tied && lastLeader) {
                 const tyingId = lastLeader === game.awayId ? game.homeId : game.awayId;
                 event = { color: flashColor(league, tyingId), card: cardLines('TIED', game.awayScore + '-' + game.homeScore), what: 'Tie' };
@@ -1041,7 +1041,7 @@ function setButton(context, lines, lineSpacing, bgColor, force) {
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 // Card shown after the flash: top line white (team, or TIED), bottom line
-// yellow ("LEAD +3", or the tied score). Sized to fit; same look as the other
+// yellow ("UP 3" = lead margin, or the tied score). Sized to fit; same look as the other
 // plugins' scoring cards.
 const CARD_MS = 3000;
 function cardLines(top, bottom) {
