@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Live NBA Scoreboard Settings</title>
+    <style>
+        :root {
+            --bg:        #1e1e1e;
+            --surface:   #2c2c2c;
+            --border:    #444;
+            --text:      #d4d4d4;
+            --accent:    #1D428A;
+            --accent-hi: #F58426;
+            --radius:    6px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; font-size: 13px; padding: 12px; }
+        h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #fff; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        label { display: block; margin-bottom: 4px; color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+        select {
+            width: 100%; padding: 7px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+            color: var(--text); font-size: 13px; cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center; margin-bottom: 14px;
+        }
+        select:focus { outline: none; border-color: var(--accent-hi); }
+        .info-box { padding: 9px 11px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent-hi); border-radius: var(--radius); font-size: 11px; color: #999; line-height: 1.6; margin-bottom: 10px; }
+        .info-box strong { color: var(--text); }
+        .note-box { padding: 9px 11px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid #555; border-radius: var(--radius); font-size: 11px; color: #888; line-height: 1.6; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .hint { font-size: 11px; color: #888; line-height: 1.5; margin: -8px 0 14px; }
+        .checkbox-row input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent-hi); }
+        .checkbox-row label { margin-bottom: 0; color: var(--text); font-size: 12px; text-transform: none; letter-spacing: normal; cursor: pointer; }
+        .bg-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .bg-controls.disabled { opacity: .4; pointer-events: none; }
+
+        input[type="color"] {
+            width: 34px;
+            height: 28px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-hi);
+            cursor: pointer;
+        }
+
+        .opacity-value {
+            width: 34px;
+            text-align: right;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .bg-hint {
+            margin-top: 6px;
+            font-size: 10.5px;
+            color: #777;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<h2>🏀 Live NBA Scoreboard</h2>
+
+<label for="league">League</label>
+<select id="league">
+    <option value="nba">NBA (up to 15 keys)</option>
+    <option value="wnba">WNBA (up to 7 keys)</option>
+    <option value="gleague">G League (up to 15 keys)</option>
+</select>
+<div class="hint">Most nights need fewer keys. Extra keys show No Game; if you run short, the last key shows +N more.</div>
+
+<label for="sortOrder">Fill Order</label>
+<select id="sortOrder">
+    <option value="column">Top-to-bottom, left-to-right</option>
+    <option value="row">Left-to-right, top-to-bottom</option>
+</select>
+
+<div class="checkbox-row">
+    <input type="checkbox" id="finalsLast">
+    <label for="finalsLast">Send completed games to the end of the list</label>
+</div>
+
+<label style="margin-top:4px;">Key Background</label>
+<div class="checkbox-row" style="margin-bottom:0;">
+    <input type="checkbox" id="bgEnabled">
+    <label for="bgEnabled">Use a custom background color for this board</label>
+</div>
+<div class="bg-controls disabled" id="bgControls">
+    <input type="color" id="bgColorInput" value="#000000"/>
+    <input type="range" id="bgOpacityInput" min="10" max="100" value="100"/>
+    <span class="opacity-value" id="bgOpacityValue">100%</span>
+</div>
+<div class="bg-hint" style="margin-bottom:14px;">Handy for telling boards apart, like an NBA board and a G League board on the same page. Lighter or brighter colors can make the white text harder to read.</div>
+
+<div class="info-box">
+    <strong>How it works:</strong><br>
+    • Place this action on as many keys as you want — each key is one game<br>
+    • Shows today's games in tip-off order; the day moves on at 2:00 AM. No games today? It shows the next game day's schedule<br>
+    • Lead changes and ties flash in the team's color, then a card (NY / UP 3, TIED / 88-88); the clock turns red in the last 2:00 of the 4th and overtime<br>
+    • Keys refresh every <strong>30 seconds</strong> (every 15 in crunch time)<br>
+    • Press any key to open that game in ESPN Gamecast (the box score once it's final)<br>
+    • Changes here apply to this whole board: the block of Scoreboard keys this key is part of
+</div>
+
+<div class="note-box">
+    <strong>More than one board:</strong> each key remembers its own settings, so an NBA page and a G League page work, and boards can share a page too; give each its own background color to tell them apart. New Scoreboard keys start on the NBA. Each Stream Deck you use gets its own board.<br><br>
+    Want just one team? Use the <strong>Live NBA Scores</strong> action instead.
+</div>
+
+<script>
+    var websocket  = null;
+    var piUUID     = null;
+    var actionUUID = null;
+    var FIELDS = ['league', 'sortOrder'];
+
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+        piUUID = propertyInspectorUUID;
+        var initial = {};
+        try { var ai = JSON.parse(actionInfo); actionUUID = ai.action; initial = (ai.payload && ai.payload.settings) || {}; } catch(e) {}
+        applySettings(initial);
+        websocket = new WebSocket('ws://127.0.0.1:' + port);
+        websocket.onopen = function() {
+            websocket.send(JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }));
+            websocket.send(JSON.stringify({ event: 'getSettings', context: propertyInspectorUUID }));
+        };
+        websocket.onmessage = function(evt) {
+            try {
+                var data = JSON.parse(evt.data);
+                if (data.event === 'didReceiveSettings') applySettings((data.payload && data.payload.settings) || {});
+            } catch(e) {}
+        };
+    }
+
+    function applySettings(s) {
+        document.getElementById('league').value    = s.league    || 'nba';
+        document.getElementById('sortOrder').value = s.sortOrder || 'column';
+        document.getElementById('finalsLast').checked = !!s.finalsLast;
+        var on = !!s.bgColor;
+        document.getElementById('bgEnabled').checked = on;
+        document.getElementById('bgColorInput').value = s.bgColor || '#000000';
+        var op = s.bgOpacity != null ? s.bgOpacity : 100;
+        document.getElementById('bgOpacityInput').value = op;
+        document.getElementById('bgOpacityValue').textContent = op + '%';
+        document.getElementById('bgControls').classList.toggle('disabled', !on);
+    }
+
+    function saveSettings() {
+        if (!websocket || !piUUID) return;
+        var settings = {
+            league:     document.getElementById('league').value,
+            sortOrder:  document.getElementById('sortOrder').value,
+            finalsLast: document.getElementById('finalsLast').checked,
+            bgColor:    document.getElementById('bgEnabled').checked ? document.getElementById('bgColorInput').value : null,
+            bgOpacity:  parseInt(document.getElementById('bgOpacityInput').value, 10),
+        };
+        websocket.send(JSON.stringify({ event: 'setSettings',  context: piUUID, payload: settings }));
+        websocket.send(JSON.stringify({ event: 'sendToPlugin', context: piUUID, action: actionUUID,
+            payload: { event: 'settingsChanged', settings: settings } }));
+    }
+
+    FIELDS.forEach(function(id) { document.getElementById(id).addEventListener('change', saveSettings); });
+    document.getElementById('finalsLast').addEventListener('change', saveSettings);
+    document.getElementById('bgEnabled').addEventListener('change', function() {
+        document.getElementById('bgControls').classList.toggle('disabled', !this.checked);
+        saveSettings();
+    });
+    // Color picker: save when the picker closes ('change'), not on every drag ('input'),
+    // so the whole board isn't redrawn dozens of times while choosing.
+    document.getElementById('bgColorInput').addEventListener('change', saveSettings);
+    document.getElementById('bgOpacityInput').addEventListener('input', function() {
+        document.getElementById('bgOpacityValue').textContent = this.value + '%';
+    });
+    document.getElementById('bgOpacityInput').addEventListener('change', saveSettings);
+</script>
+
+<div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #444; text-align: center; color: #666; font-size: 10px; line-height: 1.5;">
+    Created by T.J. Lauerman<br>aka ThatSportsGamer
+</div>
+
+</body>
+</html>

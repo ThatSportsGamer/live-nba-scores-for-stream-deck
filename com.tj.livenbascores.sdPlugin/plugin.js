@@ -232,7 +232,11 @@ ws.on('close', ()  => {
 });
 
 // ── Stream Deck event handler ─────────────────────────────────────────────────
-function handleEvent({ event, context, payload }) {
+function handleEvent(ev) {
+    const { event, context, payload } = ev;
+    // Scoreboard keys are a separate action with their own handler (see the
+    // Scoreboard section at the bottom of this file).
+    if (ev.action === BOARD_ACTION || (context && boardKeys.has(context))) { handleBoardEvent(ev); return; }
     switch (event) {
 
         case 'willAppear':
@@ -388,72 +392,83 @@ async function refreshButton(context) {
     log('Refreshing', league, cfg.teamAbbr || cfg.teamId);
     try {
         const game = await fetchTeamGame(league, cfg.teamId);
-        currentGame.set(context, game || null);
-
-        // Detect live → final transition and play fireworks
-        const prevGameState = prevState.get(context);
-        prevState.set(context, game ? game.state : null);
-        if (!game || game.state !== 'final') gameFinalAt.delete(context);
-        if (prevGameState === 'live' && game && game.state === 'final') {
-            gameFinalAt.set(context, Date.now()); // starts the Custom Link post-final grace window
-            const winnerId = game.homeScore >= game.awayScore ? game.homeId : game.awayId;
-            log('Game over — fireworks for', teamName(league, winnerId));
-            refreshing.delete(context);
-            playFireworks(context, teamName(league, winnerId), flashColor(league, winnerId)).catch(e => log('fireworks error:', e.message));
-            return;
-        }
-
-        const lines   = buildLines(game, cfg);
-        const spacing = lines.some(l => typeof l === 'object') ? 1.2 : 1.4;
-        log('→', JSON.stringify(lines));
-
-        // Lead-change / tie flash. In basketball the score changes nearly every
-        // poll, so flashing on every basket would mean a key that never stops
-        // flashing. Instead, two moments:
-        //  • Lead change — the lead flips to the other team (a tie in between
-        //    doesn't reset who last led, so "BOS leads → tie → NY leads" counts,
-        //    but "BOS → tie → BOS" doesn't). Flash in the new leader's color,
-        //    then a "NY / UP 3" card (the margin, not points scored).
-        //  • Tie — the game goes from a lead to level (not 0-0). Flash in the
-        //    tying team's color, then a "TIED / 88-88" card.
-        // Both work even when both teams score between polls, since they only
-        // compare who led before and after. The first lead of the game doesn't flash.
-        if (game && game.state === 'live') {
-            const leaderId = game.awayScore > game.homeScore ? game.awayId
-                           : game.homeScore > game.awayScore ? game.homeId
-                           : null;
-            const tied = !leaderId && (game.awayScore + game.homeScore) > 0;
-            const prev = prevLeader.get(context);
-            const samePrevGame = prev && prev.eventId === game.eventId;
-            const lastLeader = samePrevGame ? prev.leaderId : null;
-            prevLeader.set(context, { eventId: game.eventId, leaderId: leaderId || lastLeader, tied });
-
-            let event = null;
-            if (samePrevGame && leaderId && lastLeader && lastLeader !== leaderId) {
-                const margin = Math.abs(game.awayScore - game.homeScore);
-                const abbr   = leaderId === game.awayId ? game.awayAbbr : game.homeAbbr;
-                event = { color: flashColor(league, leaderId), card: cardLines(abbr, 'UP ' + margin), what: 'Lead change' };
-            } else if (samePrevGame && tied && !prev.tied && lastLeader) {
-                const tyingId = lastLeader === game.awayId ? game.homeId : game.awayId;
-                event = { color: flashColor(league, tyingId), card: cardLines('TIED', game.awayScore + '-' + game.homeScore), what: 'Tie' };
-            }
-            if (event) {
-                log(event.what, '— flashing', event.color, JSON.stringify(event.card));
-                refreshing.delete(context);
-                flashButton(context, event.color, lines, spacing, resolveBgColor(cfg), event.card).catch(e => log('flashButton error:', e.message));
-                return;
-            }
-        } else {
-            prevLeader.delete(context);
-        }
-
-        setButton(context, lines, spacing, resolveBgColor(cfg));
+        presentGame(context, game, cfg);
     } catch (err) {
         log('Fetch error:', err.message);
         setButton(context, [cfg.teamAbbr || leagueConf(league).label, 'Err'], undefined, resolveBgColor(cfg));
     } finally {
         refreshing.delete(context);
     }
+}
+
+// Draws one key for one game: fireworks on live → final, the lead-change /
+// tie flash + card, or the plain score. Shared by team keys (refreshButton)
+// and Scoreboard keys (renderBoardKey).
+function presentGame(context, game, cfg) {
+    const league = LEAGUES[cfg.league] ? cfg.league : 'nba';
+    currentGame.set(context, game || null);
+
+    // Detect live → final transition and play fireworks. Matched by game, so
+    // a Scoreboard key whose slot moves to another game never compares two.
+    const gid           = game ? (game.eventId || game.link || game.matchup) : null;
+    const prevGame      = prevState.get(context);
+    const prevGameState = prevGame && prevGame.gid === gid ? prevGame.state : null;
+    prevState.set(context, game ? { gid, state: game.state } : null);
+    if (!game || game.state !== 'final') gameFinalAt.delete(context);
+    if (prevGameState === 'live' && game && game.state === 'final') {
+        gameFinalAt.set(context, Date.now()); // starts the Custom Link post-final grace window
+        const winnerId = game.homeScore >= game.awayScore ? game.homeId : game.awayId;
+        log('Game over — fireworks for', teamName(league, winnerId));
+        refreshing.delete(context);
+        playFireworks(context, teamName(league, winnerId), flashColor(league, winnerId)).catch(e => log('fireworks error:', e.message));
+        return;
+    }
+
+    const lines   = buildLines(game, cfg);
+    const spacing = lines.some(l => typeof l === 'object') ? 1.2 : 1.4;
+    log('→', JSON.stringify(lines));
+
+    // Lead-change / tie flash. In basketball the score changes nearly every
+    // poll, so flashing on every basket would mean a key that never stops
+    // flashing. Instead, two moments:
+    //  • Lead change — the lead flips to the other team (a tie in between
+    //    doesn't reset who last led, so "BOS leads → tie → NY leads" counts,
+    //    but "BOS → tie → BOS" doesn't). Flash in the new leader's color,
+    //    then a "NY / UP 3" card (the margin, not points scored).
+    //  • Tie — the game goes from a lead to level (not 0-0). Flash in the
+    //    tying team's color, then a "TIED / 88-88" card.
+    // Both work even when both teams score between polls, since they only
+    // compare who led before and after. The first lead of the game doesn't flash.
+    if (game && game.state === 'live') {
+        const leaderId = game.awayScore > game.homeScore ? game.awayId
+                       : game.homeScore > game.awayScore ? game.homeId
+                       : null;
+        const tied = !leaderId && (game.awayScore + game.homeScore) > 0;
+        const prev = prevLeader.get(context);
+        const samePrevGame = prev && prev.eventId === game.eventId;
+        const lastLeader = samePrevGame ? prev.leaderId : null;
+        prevLeader.set(context, { eventId: game.eventId, leaderId: leaderId || lastLeader, tied });
+
+        let event = null;
+        if (samePrevGame && leaderId && lastLeader && lastLeader !== leaderId) {
+            const margin = Math.abs(game.awayScore - game.homeScore);
+            const abbr   = leaderId === game.awayId ? game.awayAbbr : game.homeAbbr;
+            event = { color: flashColor(league, leaderId), card: cardLines(abbr, 'UP ' + margin), what: 'Lead change' };
+        } else if (samePrevGame && tied && !prev.tied && lastLeader) {
+            const tyingId = lastLeader === game.awayId ? game.homeId : game.awayId;
+            event = { color: flashColor(league, tyingId), card: cardLines('TIED', game.awayScore + '-' + game.homeScore), what: 'Tie' };
+        }
+        if (event) {
+            log(event.what, '— flashing', event.color, JSON.stringify(event.card));
+            refreshing.delete(context);
+            flashButton(context, event.color, lines, spacing, resolveBgColor(cfg), event.card).catch(e => log('flashButton error:', e.message));
+            return;
+        }
+    } else {
+        prevLeader.delete(context);
+    }
+
+    setButton(context, lines, spacing, resolveBgColor(cfg));
 }
 
 // ── Text sizing ───────────────────────────────────────────────────────────────
@@ -755,12 +770,13 @@ function parseEvent(e, league) {
     const awayId   = String(away?.team?.id || ''), homeId = String(home?.team?.id || '');
     const awayAbbr = teamAbbr(league, awayId, away?.team?.abbreviation);
     const homeAbbr = teamAbbr(league, homeId, home?.team?.abbreviation);
-    const matchup  = awayAbbr + ' @ ' + homeAbbr;
+    // Neutral-site games (Paris, Mexico City, the NBA Cup final...) read "vs"
+    const matchup  = awayAbbr + (comp.neutralSite ? ' vs ' : ' @ ') + homeAbbr;
 
     const gcLink = (e.links || []).find(l => (l.text || '').toLowerCase() === 'gamecast') || (e.links || [])[0];
     const link   = gcLink?.href || `https://www.espn.com/${leagueConf(league).web}/game/_/gameId/${e.id}`;
 
-    const base = { matchup, awayId, homeId, awayAbbr, homeAbbr, eventId: e.id, link };
+    const base = { matchup, awayId, homeId, awayAbbr, homeAbbr, eventId: e.id, link, startMs: Date.parse(e.date) };
 
     if (name.includes('POSTPONED') || name.includes('CANCEL') || name.includes('SUSPENDED')) return { ...base, state: 'ppd' };
     if (/DELAY/.test(name)) return { ...base, state: 'delay' };
@@ -774,7 +790,8 @@ function parseEvent(e, league) {
     const homeScore = parseInt(home?.score, 10) || 0;
     const period    = status.period || 1;
 
-    if (state === 'post') return { ...base, state: 'final', awayScore, homeScore, period };
+    // Finished games open ESPN's box score instead of Gamecast
+    if (state === 'post') return { ...base, link: `https://www.espn.com/${leagueConf(league).web}/boxscore/_/gameId/${e.id}`, state: 'final', awayScore, homeScore, period };
 
     return {
         ...base,
@@ -1022,7 +1039,9 @@ async function playFireworks(context, winnerName, winnerColor) {
     } finally {
         flashing.delete(context);
         lastRender.delete(context);
-        refreshButton(context);
+        // A Scoreboard key redraws its slot; a team key refetches its game.
+        if (boardKeys.has(context)) renderBoardKey(context, boardSlotGame.get(context) || null);
+        else refreshButton(context);
     }
 }
 
@@ -1037,6 +1056,9 @@ function setButton(context, lines, lineSpacing, bgColor, force) {
     }
     ws.send(JSON.stringify({ event: 'setImage', context, payload: { image: makeImage(lines, lineSpacing, bg.fill, bg.opacity), target: 0 } }));
 }
+
+// A key still on screen — team key or Scoreboard key.
+function keyAlive(context) { return instances.has(context) || boardKeys.has(context); }
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
@@ -1057,13 +1079,13 @@ async function flashButton(context, color, lines, spacing, restColor = 'black', 
     log('→ flash', color, card ? JSON.stringify(card) : '');
     try {
         for (let i = 0; i < 5; i++) {
-            if (!instances.has(context)) return; // key was removed mid-flash
+            if (!keyAlive(context)) return; // key was removed mid-flash
             setButton(context, [''], spacing, color, true);
             await sleep(200);
             setButton(context, [''], spacing, restColor, true);
             await sleep(200);
         }
-        if (card && instances.has(context)) {
+        if (card && keyAlive(context)) {
             setButton(context, card, 1.3, 'black', true);
             await sleep(CARD_MS);
         }
@@ -1072,4 +1094,252 @@ async function flashButton(context, color, lines, spacing, restColor = 'black', 
         lastRender.delete(context);
         setButton(context, lines, spacing, restColor);
     }
+}
+
+
+// ══ Scoreboard action ═════════════════════════════════════════════════════════
+// A second action in this plugin: every key you drag on becomes one slot of a
+// board showing today's games for one league — NBA, WNBA or G League — in
+// tip-off order. Same keys as the team action: lead-change / tie flash +
+// card, red clock in crunch time, fireworks at the final.
+//  • Each key stores its own settings, so different pages (or different
+//    blocks of keys on one page) can show different leagues. Keys on the same
+//    Stream Deck with the same settings form one board, filled in key order.
+//  • A settings change applies to the whole board the key belongs to: every
+//    Scoreboard key with the same settings that touches it (side or corner),
+//    and the keys touching those. Boards with different settings can sit
+//    side by side; two blocks with identical settings that touch are one board.
+//  • Each board can have its own custom key background color.
+//  • New keys start on the NBA.
+//  • "Today" rolls over at 2am, same as the team keys. On a day with no games
+//    the board shows the next game day's schedule (from ESPN's season
+//    calendar), with the day on each key.
+//  • More games than keys → the last key shows "+N more" (opens ESPN's
+//    scoreboard for that league). Extra keys show "No Game".
+//  • Shares the team keys' one-request-per-league scoreboard fetch.
+const BOARD_ACTION = 'com.tj.livenbascores.scoreboard';
+const BOARD_DEFAULTS = { league: 'nba', sortOrder: 'column', finalsLast: false, bgColor: null, bgOpacity: 100 };
+
+const boardKeys       = new Map(); // context -> { device, coords, settings }
+const boardSlotGame   = new Map(); // context -> game currently in that slot
+let   boardOverflow   = new Set(); // contexts acting as "+N more"
+let   boardTimer      = null;
+let   boardRefreshing = false;
+let   boardDebounce   = null;
+let   boardGames      = [];        // every game on any board (drives the 15s crunch-time cadence)
+
+function boardCfg(settings) {
+    const s = Object.assign({}, BOARD_DEFAULTS, settings || {});
+    if (!LEAGUES[s.league]) s.league = BOARD_DEFAULTS.league;
+    s.sortOrder  = s.sortOrder === 'row' ? 'row' : 'column';
+    s.finalsLast = !!s.finalsLast;
+    s.bgColor    = /^#[0-9a-fA-F]{6}$/.test(String(s.bgColor || '')) ? s.bgColor : null;
+    s.bgOpacity  = s.bgOpacity != null && !isNaN(Number(s.bgOpacity)) ? Number(s.bgOpacity) : 100;
+    return s;
+}
+const boardSig    = st => [st.league, st.sortOrder, st.finalsLast, st.bgColor || '', st.bgColor ? st.bgOpacity : ''].join('|');
+const boardKeyCfg = st => ({ teamAbbr: '', league: st.league, bgColor: st.bgColor, bgOpacity: st.bgOpacity });
+const boardMoreUrl = league => `https://www.espn.com/${leagueConf(league).web}/scoreboard`;
+
+function clearKeyMemory(context) {
+    prevLeader.delete(context); prevState.delete(context);
+    lastRender.delete(context); currentGame.delete(context); flashing.delete(context);
+    gameFinalAt.delete(context); boardSlotGame.delete(context);
+}
+
+// The board a key belongs to: same device, same settings, connected through
+// touching keys (8 directions).
+function boardBlock(context) {
+    const start = boardKeys.get(context);
+    if (!start) return [context];
+    const sig = boardSig(start.settings), out = new Set([context]), queue = [context];
+    while (queue.length) {
+        const k = boardKeys.get(queue.shift());
+        for (const [ctx, o] of boardKeys) {
+            if (out.has(ctx) || o.device !== start.device || boardSig(o.settings) !== sig) continue;
+            if (Math.abs(o.coords.row - k.coords.row) <= 1 && Math.abs(o.coords.column - k.coords.column) <= 1) {
+                out.add(ctx); queue.push(ctx);
+            }
+        }
+    }
+    return [...out];
+}
+
+function handleBoardEvent({ event, context, payload, device }) {
+    switch (event) {
+        case 'willAppear': {
+            const raw      = (payload && payload.settings) || {};
+            const settings = boardCfg(raw);
+            const coords   = (payload && payload.coordinates) || { row: 0, column: 0 };
+            boardKeys.set(context, { device: device || '__unknown__', coords, settings });
+            if (!raw.league) ws.send(JSON.stringify({ event: 'setSettings', context, payload: settings }));
+            log('Scoreboard willAppear row=' + coords.row + ' col=' + coords.column + ' league=' + settings.league + ' keys=' + boardKeys.size);
+            if (boardDebounce) clearTimeout(boardDebounce);
+            boardDebounce = setTimeout(() => { boardDebounce = null; refreshBoard(); }, 300);
+            break;
+        }
+        case 'willDisappear':
+            boardKeys.delete(context);
+            boardOverflow.delete(context);
+            clearKeyMemory(context);
+            if (boardKeys.size === 0 && boardTimer) { clearTimeout(boardTimer); boardTimer = null; log('Scoreboard: no keys — timer stopped'); }
+            break;
+        case 'didReceiveSettings':
+        case 'sendToPlugin': {
+            const k = boardKeys.get(context);
+            const incoming = payload && payload.settings;
+            if (!k || !incoming) break;
+            const next = boardCfg(incoming);
+            if (boardSig(next) === boardSig(k.settings)) break; // our own setSettings echoing back
+            // Find this key's board using its OLD settings, then move the whole board.
+            const block = boardBlock(context);
+            log('Scoreboard settings → ' + boardSig(next) + ' for ' + block.length + ' key(s)');
+            for (const ctx of block) {
+                const o = boardKeys.get(ctx);
+                o.settings = next;
+                clearKeyMemory(ctx);
+                if (ctx !== context) ws.send(JSON.stringify({ event: 'setSettings', context: ctx, payload: next }));
+            }
+            refreshBoard();
+            break;
+        }
+        case 'keyUp': {
+            const k      = boardKeys.get(context);
+            const league = (k && k.settings.league) || 'nba';
+            if (boardOverflow.has(context)) {
+                ws.send(JSON.stringify({ event: 'openUrl', payload: { url: boardMoreUrl(league) } }));
+                break;
+            }
+            const game = boardSlotGame.get(context);
+            if (game && game.link) { ws.send(JSON.stringify({ event: 'openUrl', payload: { url: game.link } })); break; }
+            // "No Game" key: refresh the board and open ESPN's scoreboard for the league
+            refreshBoard();
+            ws.send(JSON.stringify({ event: 'openUrl', payload: { url: boardMoreUrl(league) } }));
+            break;
+        }
+    }
+}
+
+function sortBoardKeys(contexts, order) {
+    return contexts.sort((a, b) => {
+        const ca = boardKeys.get(a).coords, cb = boardKeys.get(b).coords;
+        if (order === 'row') return (ca.row - cb.row) || (ca.column - cb.column);
+        return (ca.column - cb.column) || (ca.row - cb.row);
+    });
+}
+
+// A future-day game on the board: the day goes on the key ("Tue 7:30 PM"),
+// or the date when it's a week or more out.
+function boardDayTime(startMs, time) {
+    if (!Number.isFinite(startMs)) return time;
+    const d = new Date(startMs);
+    const days = (startMs - Date.now()) / 86400000;
+    const day = days >= 6.5
+        ? d.toLocaleDateString([], { month: 'numeric', day: 'numeric' })
+        : d.toLocaleDateString([], { weekday: 'short' });
+    return day + ' ' + time;
+}
+
+// ── Today's games for one league (or the next game day's, if none today) ──────
+// Today comes from the same cached scoreboard the team keys use. With no games
+// today, the response's season calendar names the next game date, fetched once
+// and cached for 10 minutes.
+const nextDayCache   = {}; // league -> { today, fetchedAt, games }
+const NEXT_DAY_TTL_MS = 10 * 60 * 1000;
+
+async function fetchBoardDay(league) {
+    const data  = await fetchScoreboard(league);
+    let games   = (data?.events || []).map(e => parseEvent(e, league));
+    if (!games.length) {
+        const today  = scoreboardDateStr();
+        const cached = nextDayCache[league];
+        if (cached && cached.today === today && Date.now() - cached.fetchedAt < NEXT_DAY_TTL_MS) return cached.games;
+        const cal  = (data?.leagues?.[0]?.calendar || []).map(c => String(typeof c === 'string' ? c : (c && (c.startDate || c.value)) || '').slice(0, 10).replace(/-/g, ''));
+        const next = cal.filter(d => /^\d{8}$/.test(d) && d > today).sort()[0];
+        if (next) {
+            const nd = await fetchJson(ESPN_BASE + leagueConf(league).api + '/scoreboard?dates=' + next + '&limit=100');
+            games = (nd?.events || []).map(e => {
+                const g = parseEvent(e, league);
+                if (g.state === 'preview' && g.time !== 'TBD') g.time = boardDayTime(g.startMs, g.time);
+                return g;
+            });
+        }
+        nextDayCache[league] = { today, fetchedAt: Date.now(), games };
+    }
+    return games.sort((a, b) => (a.startMs || 0) - (b.startMs || 0));
+}
+
+function boardGameList(games, st) {
+    let list = games.slice();
+    if (st.finalsLast) list = [...list.filter(g => g.state !== 'final'), ...list.filter(g => g.state === 'final')];
+    return list;
+}
+
+function scheduleBoard() {
+    if (boardTimer) clearTimeout(boardTimer);
+    if (boardKeys.size === 0) { boardTimer = null; return; }
+    const delay = boardGames.some(isClutchTime) ? 15_000 : 30_000; // same crunch-time rule as team keys
+    boardTimer = setTimeout(async () => { await refreshBoard(); }, delay);
+}
+
+async function refreshBoard() {
+    if (boardKeys.size === 0) return;
+    if (boardRefreshing) return;
+    boardRefreshing = true;
+    try {
+        // Boards = same device + same settings.
+        const boards = new Map();
+        for (const [ctx, k] of boardKeys) {
+            const id = k.device + '#' + boardSig(k.settings);
+            if (!boards.has(id)) boards.set(id, { settings: k.settings, keys: [] });
+            boards.get(id).keys.push(ctx);
+        }
+        // One fetch per league in use (shared with the team keys).
+        const leagues = [...new Set([...boards.values()].map(b => b.settings.league))];
+        const days = new Map();
+        await Promise.all(leagues.map(async lg => {
+            try { days.set(lg, await fetchBoardDay(lg)); }
+            catch (err) { log('Scoreboard fetch error (' + lg + '):', err.message); days.set(lg, null); }
+        }));
+
+        const overflow = new Set(), allGames = [];
+        for (const b of boards.values()) {
+            const st     = b.settings, cfg = boardKeyCfg(st), day = days.get(st.league);
+            const sorted = sortBoardKeys(b.keys.slice(), st.sortOrder);
+            if (!day) { for (const ctx of sorted) if (!flashing.has(ctx)) setButton(ctx, [leagueConf(st.league).label, 'Err'], undefined, resolveBgColor(cfg)); continue; }
+            const games = boardGameList(day, st);
+            allGames.push(...games);
+            const over  = games.length > sorted.length;
+            const slots = over ? sorted.length - 1 : sorted.length;
+            for (let i = 0; i < slots; i++) renderBoardKey(sorted[i], games[i] || null, cfg);
+            if (over) {
+                const ctx = sorted[sorted.length - 1];
+                overflow.add(ctx);
+                clearKeyMemory(ctx);
+                setButton(ctx, [{ text: '+' + (games.length - slots), fs: 22, color: '#FFD700' }, { text: 'more', fs: 13, color: '#999999' }], 1.3, resolveBgColor(cfg));
+            }
+            log('Scoreboard ' + leagueConf(st.league).label + ': ' + games.length + ' games, ' + sorted.length + ' keys');
+        }
+        boardOverflow = overflow;
+        boardGames = allGames;
+    } catch (err) {
+        log('Scoreboard error:', err.message);
+        for (const ctx of boardKeys.keys()) if (!flashing.has(ctx)) setButton(ctx, ['NBA', 'Err']);
+    } finally {
+        boardRefreshing = false;
+        scheduleBoard();
+    }
+}
+
+function renderBoardKey(context, game, cfg) {
+    if (flashing.has(context)) return;
+    const k = boardKeys.get(context);
+    cfg = cfg || boardKeyCfg(k ? k.settings : boardCfg({}));
+    boardSlotGame.set(context, game);
+    if (!game) {
+        prevLeader.delete(context); prevState.delete(context);
+        setButton(context, ['No', 'Game'], undefined, resolveBgColor(cfg));   // matches the other Scoreboards
+        return;
+    }
+    presentGame(context, game, cfg);
 }
