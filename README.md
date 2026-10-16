@@ -47,6 +47,8 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 **v1.0.0.0**
 - Initial release — NBA, WNBA, and G League scores from ESPN; live/pre-game/final/next-game states; crunch-time clock and 15-second refresh; lead-change flash; end-of-game fireworks; Gamecast or Custom Link on key press; custom key background; search with NBA → G League affiliates
 
+Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
+
 ---
 
 ## Requirements
