@@ -966,7 +966,7 @@ function resolveBgColor(cfg) {
 // One size for every matchup in every league; settled on real hardware
 // (Windows + XL, Mac + Mini) with a separate font-test plugin, 2026-10-17.
 const PRE_TEAM_FS = 16, PRE_AT_FS = 10, PRE_DAY_FS = 11.5, PRE_TIME_FS = 11.5, PRE_GAMEDAY_TIME_FS = 14;
-const PRE_SPACING = 1.15, PRE_DAY_COLOR = '#BBBBBB', PRE_MAX_W = 66;
+const PRE_SPACING = 1.12, PRE_DAY_COLOR = '#BBBBBB', PRE_MAX_W = 66;
 // Helvetica-Bold advance widths (per 1000 em) — only used to shrink a team line
 // that can't fit at 16 (e.g. G League's RCITY / VALLEY); unknown glyphs count wide.
 const PRE_GLYPHS = {
