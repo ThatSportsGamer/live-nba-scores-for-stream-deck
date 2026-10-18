@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Two actions: **Live NBA Scores** tracks one team per key, and **Live NBA Scoreboard** fills your keys with today's games for a league. Keys update automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.0-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.1-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -17,7 +17,7 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 - **Crunch time** — the clock turns red in the last 2:00 of the 4th quarter and overtime, and the key refreshes every 15 seconds instead of 30
 - **Lead-change and tie flash** — when the lead flips, the key blinks in the new leader's color and shows a short card with the margin (NY / UP 3); when the game gets tied, it blinks in the tying team's color and shows TIED / 88-88 (basketball scores change too often to flash on every basket)
 - **End-of-game fireworks** — a short celebration in the winning team's colors when the game goes final
-- **Pre-game** — shows the matchup (e.g. `BOS @ NY`) and tip-off time
+- **Pre-game** — the two teams stacked (`BOS` over `@ NY`) and the tip-off time; on off days, your team's next game with its day and time
 - **Off days** — shows your team's next scheduled game (matchup, date, and time) instead of a dead-end "No Game"
 - **Final scores** — "Final", "Final/OT", or "Final/2OT"
 - **Gamecast shortcut** — press any key to open that game in ESPN Gamecast (the box score once the game is final)
@@ -31,6 +31,13 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 ## Recent Updates
 
+**v1.1.1.0**
+- Pregame keys are easier to read: the teams stack on two lines (away team on top, "@ home" below, with a small "@") and the day and time get their own lines. On game day the day line goes away and the start time is shown larger. Same on team keys and Scoreboard keys
+- Games a week or more out show the date on the day line ("Sat 10/24"), with the time underneath
+- Off-day keys show your team's next game the same way: the "Next Game" label is gone, and the day line reads the weekday ("Thursday"), or the date when it's a week or more away
+- The Scoreboard's next-game-day keys (no games today) use the same layout
+- Long G League names (RCITY, VALLEY) shrink just enough to fit
+
 **v1.1.0.0**
 - New: **Live NBA Scoreboard** action — drag it onto as many keys as you like and they fill with today's games, one game per key, in tip-off order. Pick the league for each board: **NBA** (up to 15 keys), **WNBA** (up to 7) or **G League** (up to 15)
 - Same keys as the team action: lead-change and tie flashes with their cards (NY / UP 3, TIED / 88-88), the red crunch-time clock, and fireworks at the final
@@ -43,9 +50,6 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 **v1.0.1.0**
 - Lead-change flash is now 5 solid blinks of the new leader's color with no text, then a 3-second card with the team and margin (e.g. NY / UP 3)
 - New: when a game gets tied up, the key blinks in the tying team's color and shows a TIED / 88-88 card
-
-**v1.0.0.0**
-- Initial release — NBA, WNBA, and G League scores from ESPN; live/pre-game/final/next-game states; crunch-time clock and 15-second refresh; lead-change flash; end-of-game fireworks; Gamecast or Custom Link on key press; custom key background; search with NBA → G League affiliates
 
 Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 
@@ -95,9 +99,18 @@ The key loads your team's game within a few seconds and refreshes every 30 secon
 
 ![Live NBA Scores key states](assets/button-states.png)
 
-**Before the game:**
+**Before the game** (later in the week; the day is gray):
 ```
-BOS @ NY
+BOS
+@ NY
+Thursday
+7:30 PM
+```
+
+**Game day:**
+```
+BOS
+@ NY
 7:30 PM
 ```
 
@@ -116,11 +129,12 @@ NY  121
 Final/2OT
 ```
 
-**Off day:**
+**Off day** (your team's next game — the weekday, or the date when it's a week or more away):
 ```
-Next Game
-UTA @ DEN
-10/4 7:00 PM
+BOS
+@ NY
+Thursday
+7:30 PM
 ```
 
 **No game scheduled at all** (true offseason, before next season's schedule is out):
@@ -142,7 +156,7 @@ Each **Live NBA Scoreboard** key is one of today's games, in tip-off order. The 
 - **More games than keys:** the last key shows `+N more`. **More keys than games:** the extra keys show `No Game`. Pressing either opens ESPN's scoreboard for that league
 - **Fill order:** top-to-bottom (default) or left-to-right. **Finals last:** optionally move finished games to the end
 - **Tip for smaller Stream Decks** (Mini, Neo, a 15-key MK.2): turn on finals last, so live and upcoming games keep their keys and finished games move to the `+N more` key.
-- **Day change:** the board keeps today's games until 2:00 AM, then moves to the next day. On a day with no games it shows the next game day's schedule (e.g. `Fri 7:30 PM`)
+- **Day change:** the board keeps today's games until 2:00 AM, then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines)
 - **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. A settings change applies to the whole board the key is part of. New Scoreboard keys start on the NBA
 - **Multiple Stream Decks:** each deck (including a Virtual Stream Deck or Stream Deck Mobile) gets its own boards
 

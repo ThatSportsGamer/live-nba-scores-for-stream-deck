@@ -425,7 +425,7 @@ function presentGame(context, game, cfg) {
     }
 
     const lines   = buildLines(game, cfg);
-    const spacing = lines.some(l => typeof l === 'object') ? 1.2 : 1.4;
+    const spacing = lines.spacing || (lines.some(l => typeof l === 'object') ? 1.2 : 1.4);
     log('→', JSON.stringify(lines));
 
     // Lead-change / tie flash. In basketball the score changes nearly every
@@ -523,14 +523,14 @@ function buildLines(game, cfg) {
     const abbr = cfg.teamAbbr || leagueConf(cfg.league).label;
     if (!game) return [abbr, 'No Game'];
 
-    if (game.state === 'nextgame') return [
-        { text: 'Next Game', fs: 12, color: '#AAAAAA' },
-        game.matchup,
-        game.dateLabel + ' ' + game.time,
-    ];
-    if (game.state === 'preview') return [game.matchup, game.time];
-    if (game.state === 'ppd')     return [game.matchup, { text: 'PPD',   fs: 16, color: '#E74C3C' }];
-    if (game.state === 'delay')   return [game.matchup, { text: 'DELAY', fs: 14, color: '#3498DB' }];
+    // Upcoming game (today, or the next one on an off day): stacked layout,
+    // day line by calendar days — see pregameLines / pregameWhen.
+    if (game.state === 'nextgame' || game.state === 'preview') {
+        const when = game.startIso ? pregameWhen(game.startIso, new Date(), game.tbd || game.time === 'TBD') : { day: null, time: game.time };
+        return pregameLines(game.awayAbbr, game.homeAbbr, game.neutral, when.day, when.time);
+    }
+    if (game.state === 'ppd')     return pregameLines(game.awayAbbr, game.homeAbbr, game.neutral, null, null, { text: 'PPD',   fs: 14, color: '#E74C3C' });
+    if (game.state === 'delay')   return pregameLines(game.awayAbbr, game.homeAbbr, game.neutral, null, null, { text: 'DELAY', fs: 14, color: '#3498DB' });
 
     if (game.state === 'live' || game.state === 'final') {
         const awayText = game.awayAbbr + ' ' + game.awayScore;
@@ -776,14 +776,14 @@ function parseEvent(e, league) {
     const gcLink = (e.links || []).find(l => (l.text || '').toLowerCase() === 'gamecast') || (e.links || [])[0];
     const link   = gcLink?.href || `https://www.espn.com/${leagueConf(league).web}/game/_/gameId/${e.id}`;
 
-    const base = { matchup, awayId, homeId, awayAbbr, homeAbbr, eventId: e.id, link, startMs: Date.parse(e.date) };
+    const base = { matchup, awayId, homeId, awayAbbr, homeAbbr, neutral: !!comp.neutralSite, eventId: e.id, link, startMs: Date.parse(e.date), startIso: e.date };
 
     if (name.includes('POSTPONED') || name.includes('CANCEL') || name.includes('SUSPENDED')) return { ...base, state: 'ppd' };
     if (/DELAY/.test(name)) return { ...base, state: 'delay' };
 
     if (state === 'pre') {
         const timeValid = comp.timeValid !== false && e.timeValid !== false;
-        return { ...base, state: 'preview', time: timeValid ? fmtTime(e.date) : 'TBD' };
+        return { ...base, state: 'preview', tbd: !timeValid, time: timeValid ? fmtTime(e.date) : 'TBD' };
     }
 
     const awayScore = parseInt(away?.score, 10) || 0;
@@ -855,7 +855,7 @@ async function findNextGame(league, teamId) {
         ...game,
         state:     'nextgame',
         startMs:   d.getTime(),
-        dateLabel: d.toLocaleDateString([], { month: 'numeric', day: 'numeric' }),
+        startIso:  next.date,
         time:      game.time === 'TBD' ? 'TBD' : fmtTime(next.date),
     };
 }
@@ -955,6 +955,82 @@ function resolveBgColor(cfg) {
 }
 
 // Accepts an array of strings (auto-sized) or { text, fs, color } objects (explicit size).
+// ── Stacked pregame layout ────────────────────────────────────────────────────
+// Every pregame / upcoming-game key, on team keys and Scoreboard keys alike:
+//   AWAY            (16)
+//   @ HOME          (16, with a small "@" — or "vs" at neutral sites — raised
+//                    to the middle of the capitals; the whole line centered)
+//   Wednesday       (11.5, gray) — the weekday; "Sat 10/24" when 7+ days out
+//   12:00 PM        (11.5) — or TBD when the start time isn't set
+// On game day the day line goes away and the time is shown larger (14).
+// One size for every matchup in every league; settled on real hardware
+// (Windows + XL, Mac + Mini) with a separate font-test plugin, 2026-10-17.
+const PRE_TEAM_FS = 16, PRE_AT_FS = 10, PRE_DAY_FS = 11.5, PRE_TIME_FS = 11.5, PRE_GAMEDAY_TIME_FS = 14;
+const PRE_SPACING = 1.15, PRE_DAY_COLOR = '#BBBBBB', PRE_MAX_W = 66;
+// Helvetica-Bold advance widths (per 1000 em) — only used to shrink a team line
+// that can't fit at 16 (e.g. G League's RCITY / VALLEY); unknown glyphs count wide.
+const PRE_GLYPHS = {
+    A: 722, B: 722, C: 722, D: 722, E: 667, F: 611, G: 778, H: 722, I: 278,
+    J: 556, K: 722, L: 611, M: 889, N: 722, O: 778, P: 667, Q: 778, R: 722,
+    S: 667, T: 611, U: 722, V: 667, W: 944, X: 667, Y: 667, Z: 611,
+    0: 556, 1: 556, 2: 556, 3: 556, 4: 556, 5: 556, 6: 556, 7: 556, 8: 556, 9: 556,
+    '&': 778, '-': 333, '.': 278, '@': 975, v: 556, s: 556, ' ': 278,
+};
+function preWidth(str, fs) {
+    let u = 0;
+    for (const ch of String(str)) u += PRE_GLYPHS[ch] !== undefined ? PRE_GLYPHS[ch] : 800;
+    return u * fs / 1000;
+}
+function preFitFs(extraPx, text) {
+    let fs = PRE_TEAM_FS;
+    while (fs > 9 && extraPx + preWidth(text, fs) > PRE_MAX_W) fs -= 0.5;
+    return fs;
+}
+
+// Day/time text for an upcoming game, by calendar days in the viewer's local time:
+// game day → { day: null, time }, 1–6 days → { day: 'Thursday', time },
+// 7+ days → { day: 'Sat 10/24', time }. tbd → time 'TBD'.
+// A TBD game's placeholder time is often midnight Eastern, so its date is read
+// in Eastern time (otherwise it would land on the day before out West).
+function pregameWhen(iso, now, tbd) {
+    try {
+        const d = new Date(iso), n = now || new Date();
+        const tz = tbd ? { timeZone: 'America/New_York' } : {};
+        const ymd = x => Date.parse(x.toLocaleDateString('en-CA', tz) + 'T00:00:00Z'); // YYYY-MM-DD
+        const days = Math.round((ymd(d) - ymd(n)) / 86400000);
+        const time = tbd ? 'TBD' : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        if (days <= 0) return { day: null, time };
+        if (days < 7)  return { day: d.toLocaleDateString([], { weekday: 'long', ...tz }), time };
+        return { day: d.toLocaleDateString([], { weekday: 'short', ...tz }) + ' ' + d.toLocaleDateString([], { month: 'numeric', day: 'numeric', ...tz }), time };
+    } catch (e) { return { day: null, time: tbd ? 'TBD' : '' }; }
+}
+
+// Lines for a stacked pregame key. `last` replaces the day/time lines (PPD / DELAY).
+function pregameLines(awayAbbr, homeAbbr, neutral, day, time, last) {
+    const pre = neutral ? 'vs' : '@';
+    const lines = [
+        { text: awayAbbr, fs: preFitFs(0, awayAbbr) },
+        { home: homeAbbr, pre, afs: PRE_AT_FS, fs: preFitFs(preWidth(pre + ' ', PRE_AT_FS), homeAbbr) },
+    ];
+    if (last)     lines.push(last);
+    else if (day) lines.push({ text: day, fs: PRE_DAY_FS, color: PRE_DAY_COLOR }, { text: time, fs: PRE_TIME_FS });
+    else          lines.push({ text: time, fs: PRE_GAMEDAY_TIME_FS });
+    lines.spacing = PRE_SPACING;
+    return lines;
+}
+
+// SVG for the "@ HOME" line. Stream Deck's renderer ignores dy / baseline
+// shifts, so the line is drawn twice in the same centered layout: first with
+// the "@" invisible, then with only the "@" visible, lifted so its middle sits
+// at the middle of the capitals. Both copies lay out identically on any font.
+function preHomeLineSvg(y, fs, item, color) {
+    const lift  = 0.344 * fs - 0.276 * item.afs - 0.4;
+    const attrs = `x="36" text-anchor="middle" xml:space="preserve" font-family="Helvetica Neue,Arial,sans-serif" font-size="${fs}" font-weight="600" fill="${color || 'white'}"`;
+    const pre   = escXml(item.pre + ' '), home = escXml(item.home);
+    return `<text y="${y.toFixed(2)}" ${attrs}><tspan font-size="${item.afs}" fill="none">${pre}</tspan><tspan>${home}</tspan></text>` +
+           `<text y="${(y - lift).toFixed(2)}" ${attrs}><tspan font-size="${item.afs}">${pre}</tspan><tspan fill="none">${home}</tspan></text>`;
+}
+
 function makeImage(lines, lineSpacing = 1.4, bgColor = 'black', bgOpacity = 1) {
     const W = 72, H = 72, PAD = 4, MAX_W = W - PAD * 2;
 
@@ -971,8 +1047,9 @@ function makeImage(lines, lineSpacing = 1.4, bgColor = 'black', bgOpacity = 1) {
     const totalH      = lineHeights.reduce((a, b) => a + b, 0);
     let   y           = (H - totalH) / 2 + items[0].fs * 0.80;
 
-    const rows = items.map(({ text, fs, color }, i) => {
+    const rows = items.map(({ text, fs, color, home }, i) => {
         if (i > 0) y += lineHeights[i - 1] - items[i - 1].fs * 0.80 + fs * 0.80;
+        if (home !== undefined) return preHomeLineSvg(y, fs, items[i], color);
         return `<text x="36" y="${y.toFixed(1)}" text-anchor="middle" fill="${color || 'white'}" ` +
                `font-family="Helvetica Neue,Arial,sans-serif" font-size="${fs}" font-weight="600">${escXml(text)}</text>`;
     }).join('');
@@ -1228,17 +1305,6 @@ function sortBoardKeys(contexts, order) {
     });
 }
 
-// A future-day game on the board: the day goes on the key ("Tue 7:30 PM"),
-// or the date when it's a week or more out.
-function boardDayTime(startMs, time) {
-    if (!Number.isFinite(startMs)) return time;
-    const d = new Date(startMs);
-    const days = (startMs - Date.now()) / 86400000;
-    const day = days >= 6.5
-        ? d.toLocaleDateString([], { month: 'numeric', day: 'numeric' })
-        : d.toLocaleDateString([], { weekday: 'short' });
-    return day + ' ' + time;
-}
 
 // ── Today's games for one league (or the next game day's, if none today) ──────
 // Today comes from the same cached scoreboard the team keys use. With no games
@@ -1258,11 +1324,7 @@ async function fetchBoardDay(league) {
         const next = cal.filter(d => /^\d{8}$/.test(d) && d > today).sort()[0];
         if (next) {
             const nd = await fetchJson(ESPN_BASE + leagueConf(league).api + '/scoreboard?dates=' + next + '&limit=100');
-            games = (nd?.events || []).map(e => {
-                const g = parseEvent(e, league);
-                if (g.state === 'preview' && g.time !== 'TBD') g.time = boardDayTime(g.startMs, g.time);
-                return g;
-            });
+            games = (nd?.events || []).map(e => parseEvent(e, league)); // the keys show the day themselves (pregameLines)
         }
         nextDayCache[league] = { today, fetchedAt: Date.now(), games };
     }

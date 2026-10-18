@@ -2,6 +2,13 @@
 
 Full version history for Live NBA Scores, newest first. The [README](README.md) lists the three most recent updates.
 
+**v1.1.1.0**
+- Pregame keys are easier to read: the teams stack on two lines (away team on top, "@ home" below, with a small "@") and the day and time get their own lines. On game day the day line goes away and the start time is shown larger. Same on team keys and Scoreboard keys
+- Games a week or more out show the date on the day line ("Sat 10/24"), with the time underneath
+- Off-day keys show your team's next game the same way: the "Next Game" label is gone, and the day line reads the weekday ("Thursday"), or the date when it's a week or more away
+- The Scoreboard's next-game-day keys (no games today) use the same layout
+- Long G League names (RCITY, VALLEY) shrink just enough to fit
+
 **v1.1.0.0**
 - New: **Live NBA Scoreboard** action — drag it onto as many keys as you like and they fill with today's games, one game per key, in tip-off order. Pick the league for each board: **NBA** (up to 15 keys), **WNBA** (up to 7) or **G League** (up to 15)
 - Same keys as the team action: lead-change and tie flashes with their cards (NY / UP 3, TIED / 88-88), the red crunch-time clock, and fireworks at the final
