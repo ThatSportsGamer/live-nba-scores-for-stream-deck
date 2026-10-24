@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Two actions: **Live NBA Scores** tracks one team per key, and **Live NBA Scoreboard** fills your keys with today's games for a league. Keys update automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.1-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.2-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -31,6 +31,12 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 ## Recent Updates
 
+**v1.1.2.0**
+- Fixed: "today" is now read in Eastern time, which is how ESPN dates its games. Outside the US the keys could ask for tomorrow's slate while tonight's games were still on. The day now changes at 5:00 AM Eastern (2:00 AM Pacific), so late games and their finals stay on the keys overnight everywhere
+- If ESPN stops responding for a moment, keys keep showing the last scores with a small amber dot instead of "Err" (after 10 minutes without an update they show "Err")
+- One odd game in ESPN's data no longer turns a whole Scoreboard to "Err"
+- Requires Stream Deck 7.1 or later
+
 **v1.1.1.0**
 - Pregame keys are easier to read: the teams stack on two lines (away team on top, "@ home" below, with a small "@") and the day and time get their own lines. On game day the day line goes away and the start time is shown larger. Same on team keys and Scoreboard keys
 - Games a week or more out show the date on the day line ("Sat 10/24"), with the time underneath
@@ -47,10 +53,6 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 - Final games now open ESPN's box score instead of Gamecast, on both actions
 - Neutral-site games (international games, the NBA Cup final) show "vs" instead of "@", on both actions
 
-**v1.0.1.0**
-- Lead-change flash is now 5 solid blinks of the new leader's color with no text, then a 3-second card with the team and margin (e.g. NY / UP 3)
-- New: when a game gets tied up, the key blinks in the tying team's color and shows a TIED / 88-88 card
-
 Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 
 ---
@@ -58,7 +60,7 @@ Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 ## Requirements
 
 - [Elgato Stream Deck](https://www.elgato.com/stream-deck) hardware
-- [Stream Deck software](https://www.elgato.com/downloads) version 6.9 or later (Mac or Windows)
+- [Stream Deck software](https://www.elgato.com/downloads) version 7.1 or later (Mac or Windows)
 - No account required — the plugin uses ESPN's free public scoreboard API
 
 ---
@@ -156,7 +158,7 @@ Each **Live NBA Scoreboard** key is one of today's games, in tip-off order. The 
 - **More games than keys:** the last key shows `+N more`. **More keys than games:** the extra keys show `No Game`. Pressing either opens ESPN's scoreboard for that league
 - **Fill order:** top-to-bottom (default) or left-to-right. **Finals last:** optionally move finished games to the end
 - **Tip for smaller Stream Decks** (Mini, Neo, a 15-key MK.2): turn on finals last, so live and upcoming games keep their keys and finished games move to the `+N more` key.
-- **Day change:** the board keeps today's games until 2:00 AM, then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines)
+- **Day change:** the board keeps today's games until 5:00 AM Eastern (2:00 AM Pacific), then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines)
 - **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. A settings change applies to the whole board the key is part of. New Scoreboard keys start on the NBA
 - **Multiple Stream Decks:** each deck (including a Virtual Stream Deck or Stream Deck Mobile) gets its own boards
 
@@ -164,7 +166,7 @@ Each **Live NBA Scoreboard** key is one of today's games, in tip-off order. The 
 
 ## How It Works
 
-The plugin reads [ESPN's public scoreboard API](https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard) for today's date (rolling over at 2:00 AM, so late West Coast games stay on the key). One scoreboard request per league is shared by every key — team keys and Scoreboard keys alike — at most every 20 seconds. On days your team doesn't play, it looks up the team's next game from ESPN's team schedule (checked at most hourly). No API key or account is required, and the plugin uses only Node.js built-in modules.
+The plugin reads [ESPN's public scoreboard API](https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard) for today's date (read in Eastern time, rolling over at 5:00 AM Eastern, so late West Coast games stay on the key). One scoreboard request per league is shared by every key — team keys and Scoreboard keys alike — at most every 20 seconds. On days your team doesn't play, it looks up the team's next game from ESPN's team schedule (checked at most hourly). No API key or account is required, and the plugin uses only Node.js built-in modules.
 
 Team lists in the settings panel refresh from ESPN, so relocations and new G League clubs show up without a plugin update. NBA → G League affiliations are hand-maintained, since ESPN doesn't publish them.
 

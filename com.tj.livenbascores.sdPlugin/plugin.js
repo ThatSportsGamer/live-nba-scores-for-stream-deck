@@ -19,10 +19,20 @@ const zlib   = require('zlib');
 const LOG_FILE = path.join(__dirname, 'plugin.log');
 try { fs.writeFileSync(LOG_FILE, `=== NBA Plugin ${new Date().toISOString()} ===\nNode: ${process.version}\nArgs: ${process.argv.slice(2).join(' ')}\n`); } catch (e) { /* ignore */ }
 
+// plugin.log is only reset when the plugin starts, so on a deck that stays up
+// for days it would otherwise grow without limit (every poll logs a few lines).
+// Past LOG_MAX_BYTES it is truncated and starts over.
+const LOG_MAX_BYTES = 512 * 1024;
+let   logBytes      = 0;
+
 function log(...args) {
     const ts   = new Date().toISOString().slice(11, 19);
     const line = `[${ts}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}\n`;
-    try { fs.appendFileSync(LOG_FILE, line); } catch (e) { /* ignore */ }
+    try {
+        if (logBytes > LOG_MAX_BYTES) { fs.writeFileSync(LOG_FILE, `=== log trimmed ${new Date().toISOString()} ===\n`); logBytes = 0; }
+        fs.appendFileSync(LOG_FILE, line);
+        logBytes += line.length;
+    } catch (e) { /* ignore */ }
 }
 
 process.on('uncaughtException',  err => log('CRASH:', err.stack || err.message));
@@ -392,6 +402,9 @@ async function refreshButton(context) {
     log('Refreshing', league, cfg.teamAbbr || cfg.teamId);
     try {
         const game = await fetchTeamGame(league, cfg.teamId);
+        // The key may have left the screen while the request was in flight;
+        // presenting now would re-create its per-key memory for nothing.
+        if (!instances.has(context)) return;
         presentGame(context, game, cfg);
     } catch (err) {
         log('Fetch error:', err.message);
@@ -687,48 +700,83 @@ const ESPN_HEADERS = {
     'Accept-Encoding': 'gzip, deflate, br',
 };
 
+// The 15 s socket timeout only fires when the connection goes quiet; a server
+// that trickles bytes would keep the request (and the "refreshing" flag of
+// every key waiting on it) alive indefinitely. FETCH_DEADLINE_MS caps the whole
+// request, and the promise settles exactly once whichever way it ends.
+const FETCH_DEADLINE_MS = 20_000;
+
 function fetchJson(url) {
     return new Promise((resolve, reject) => {
+        let settled = false, deadline = null;
+        const settle = (fn, value) => { if (settled) return; settled = true; clearTimeout(deadline); fn(value); };
+
         const req = https.get(url, { headers: ESPN_HEADERS }, res => {
             if (res.statusCode !== 200) {
-                res.resume();
-                reject(new Error('HTTP ' + res.statusCode));
+                res.resume(); // drain so the socket can be reused/closed cleanly
+                settle(reject, new Error('HTTP ' + res.statusCode));
                 return;
             }
+
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
+            res.on('error', e => settle(reject, e));
             res.on('end', () => {
                 try {
                     let buf = Buffer.concat(chunks);
                     const enc = res.headers['content-encoding'];
-                    if (enc === 'gzip')         buf = zlib.gunzipSync(buf);
-                    else if (enc === 'br')      buf = zlib.brotliDecompressSync(buf);
+                    if (enc === 'gzip')      buf = zlib.gunzipSync(buf);
+                    else if (enc === 'br')   buf = zlib.brotliDecompressSync(buf);
                     else if (enc === 'deflate') buf = zlib.inflateSync(buf);
-                    resolve(JSON.parse(buf.toString('utf8')));
-                } catch (e) { reject(e); }
+                    settle(resolve, JSON.parse(buf.toString('utf8')));
+                } catch (e) { settle(reject, e); }
             });
         });
-        req.on('error', reject);
-        req.setTimeout(15_000, () => { req.destroy(); reject(new Error('Request timed out')); });
+
+        deadline = setTimeout(() => { req.destroy(); settle(reject, new Error('Request timed out')); }, FETCH_DEADLINE_MS);
+        req.on('error', e => settle(reject, e));
+        req.setTimeout(15_000, () => { req.destroy(); settle(reject, new Error('Request timed out')); });
     });
 }
 
-// "Today" as ESPN's YYYYMMDD, with a 2am local rollover so a late West Coast
-// game (or a final) stays on the key past midnight. Uses local system time,
-// same assumption as the other plugins.
-function nowDate() {
-    return DEBUG_ANCHOR_DATE ? new Date(DEBUG_ANCHOR_DATE + 'T12:00:00') : new Date();
+// "Today" as ESPN's YYYYMMDD. ESPN's scoreboard dates are US Eastern dates, so
+// the date is read in America/New_York rather than from the host clock — a
+// viewer in London or Tokyo would otherwise ask for tomorrow's slate while
+// tonight's games were still on. The day rolls over at 5:00 AM Eastern
+// (= 2:00 AM Pacific, the old West Coast behavior), so a late game or its final
+// stays on the key well past midnight everywhere. Built-in Intl only.
+const ET_ZONE   = 'America/New_York';
+const ET_FORMAT = new Intl.DateTimeFormat('en-US', {
+    timeZone: ET_ZONE, hourCycle: 'h23',
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric',
+});
+const DAY_ROLLOVER_ET_HOUR = 5;
+
+function etParts(ms) {
+    const o = {};
+    for (const p of ET_FORMAT.formatToParts(new Date(ms))) o[p.type] = p.value;
+    return { year: +o.year, month: +o.month, day: +o.day };
 }
 function scoreboardDateStr() {
-    const d = nowDate();
-    if (!DEBUG_ANCHOR_DATE && d.getHours() < 2) d.setDate(d.getDate() - 1);
-    return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    if (DEBUG_ANCHOR_DATE) return DEBUG_ANCHOR_DATE.replace(/-/g, '');
+    const p = etParts(Date.now() - DAY_ROLLOVER_ET_HOUR * 3600e3);
+    return p.year + String(p.month).padStart(2, '0') + String(p.day).padStart(2, '0');
 }
 
 // One scoreboard request per league per ~20s, shared by every key — ten
 // keys on NBA teams cost the same one request as a single key.
-const SCOREBOARD_TTL_MS = 20_000;
+//
+// If ESPN stops answering, the last good scoreboard for the same date keeps
+// driving the keys for up to SCOREBOARD_STALE_MAX_MS instead of dropping every
+// key to "Err", and a small amber dot marks them as not live (dataStale, drawn
+// by setButton). The fallback result is cached like any other, so retries stay
+// one per league per TTL.
+const SCOREBOARD_TTL_MS       = 20_000;
+const SCOREBOARD_STALE_MAX_MS = 10 * 60_000;
 const scoreboardCache   = {}; // league -> { date, fetchedAt, promise }
+const scoreboardLastGood = {}; // league -> { date, data, at }
+const staleLeagues      = new Set();
+let   dataStale         = false; // true while any league is being served from its last good scoreboard
 
 function fetchScoreboard(league) {
     const date   = scoreboardDateStr();
@@ -736,7 +784,19 @@ function fetchScoreboard(league) {
     if (cached && cached.date === date && Date.now() - cached.fetchedAt < SCOREBOARD_TTL_MS) return cached.promise;
 
     const url     = ESPN_BASE + leagueConf(league).api + '/scoreboard?dates=' + date + '&limit=100';
-    const promise = fetchJson(url);
+    const promise = fetchJson(url).then(data => {
+        scoreboardLastGood[league] = { date, data, at: Date.now() };
+        if (staleLeagues.delete(league)) { dataStale = staleLeagues.size > 0; log('ESPN is answering again (' + league + ') — data live'); }
+        return data;
+    }, err => {
+        const lg = scoreboardLastGood[league];
+        if (lg && lg.date === date && Date.now() - lg.at < SCOREBOARD_STALE_MAX_MS) {
+            if (!staleLeagues.has(league)) log('ESPN fetch failed (' + league + ') — showing cached data:', err.message);
+            staleLeagues.add(league); dataStale = true;
+            return lg.data;
+        }
+        throw err;
+    });
     scoreboardCache[league] = { date, fetchedAt: Date.now(), promise };
     promise.catch(() => { if (scoreboardCache[league]?.promise === promise) delete scoreboardCache[league]; });
     return promise;
@@ -1031,7 +1091,7 @@ function preHomeLineSvg(y, fs, item, color) {
            `<text y="${(y - lift).toFixed(2)}" ${attrs}><tspan font-size="${item.afs}">${pre}</tspan><tspan fill="none">${home}</tspan></text>`;
 }
 
-function makeImage(lines, lineSpacing = 1.4, bgColor = 'black', bgOpacity = 1) {
+function makeImage(lines, lineSpacing = 1.4, bgColor = 'black', bgOpacity = 1, stale = false) {
     const W = 72, H = 72, PAD = 4, MAX_W = W - PAD * 2;
 
     const items = lines.map(l => {
@@ -1057,7 +1117,7 @@ function makeImage(lines, lineSpacing = 1.4, bgColor = 'black', bgOpacity = 1) {
     const svg =
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="144" height="144" overflow="hidden">` +
         `<rect width="${W}" height="${H}" fill="${bgColor}" fill-opacity="${bgOpacity}"/>` +
-        rows + `</svg>`;
+        rows + (stale ? `<circle cx="65" cy="7" r="3.2" fill="#FFB020"/>` : '') + `</svg>`;
 
     return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 }
@@ -1116,6 +1176,7 @@ async function playFireworks(context, winnerName, winnerColor) {
     } finally {
         flashing.delete(context);
         lastRender.delete(context);
+        if (!keyAlive(context)) return; // key left the screen mid-animation — nothing to redraw
         // A Scoreboard key redraws its slot; a team key refetches its game.
         if (boardKeys.has(context)) renderBoardKey(context, boardSlotGame.get(context) || null);
         else refreshButton(context);
@@ -1126,12 +1187,12 @@ async function playFireworks(context, winnerName, winnerColor) {
 // { fill, opacity } object (resolveBgColor's output).
 function setButton(context, lines, lineSpacing, bgColor, force) {
     const bg  = (bgColor && typeof bgColor === 'object') ? bgColor : { fill: bgColor || 'black', opacity: 1 };
-    const key = JSON.stringify({ lines, bg });
+    const key = JSON.stringify({ lines, bg, stale: dataStale });
     if (!force) {
         if (lastRender.get(context) === key) return; // skip if unchanged
         lastRender.set(context, key);
     }
-    ws.send(JSON.stringify({ event: 'setImage', context, payload: { image: makeImage(lines, lineSpacing, bg.fill, bg.opacity), target: 0 } }));
+    ws.send(JSON.stringify({ event: 'setImage', context, payload: { image: makeImage(lines, lineSpacing, bg.fill, bg.opacity, dataStale), target: 0 } }));
 }
 
 // A key still on screen — team key or Scoreboard key.
@@ -1169,7 +1230,7 @@ async function flashButton(context, color, lines, spacing, restColor = 'black', 
     } finally {
         flashing.delete(context);
         lastRender.delete(context);
-        setButton(context, lines, spacing, restColor);
+        if (keyAlive(context)) setButton(context, lines, spacing, restColor);
     }
 }
 
@@ -1313,9 +1374,19 @@ function sortBoardKeys(contexts, order) {
 const nextDayCache   = {}; // league -> { today, fetchedAt, games }
 const NEXT_DAY_TTL_MS = 10 * 60 * 1000;
 
+// One malformed event in ESPN's payload shouldn't turn a whole board to "Err" —
+// skip it and keep the rest.
+function parseEvents(events, league) {
+    const out = [];
+    for (const e of Array.isArray(events) ? events : []) {
+        try { out.push(parseEvent(e, league)); } catch (err) { log('Skipping unparseable event:', err.message); }
+    }
+    return out;
+}
+
 async function fetchBoardDay(league) {
     const data  = await fetchScoreboard(league);
-    let games   = (data?.events || []).map(e => parseEvent(e, league));
+    let games   = parseEvents(data?.events, league);
     if (!games.length) {
         const today  = scoreboardDateStr();
         const cached = nextDayCache[league];
@@ -1324,7 +1395,7 @@ async function fetchBoardDay(league) {
         const next = cal.filter(d => /^\d{8}$/.test(d) && d > today).sort()[0];
         if (next) {
             const nd = await fetchJson(ESPN_BASE + leagueConf(league).api + '/scoreboard?dates=' + next + '&limit=100');
-            games = (nd?.events || []).map(e => parseEvent(e, league)); // the keys show the day themselves (pregameLines)
+            games = parseEvents(nd?.events, league); // the keys show the day themselves (pregameLines)
         }
         nextDayCache[league] = { today, fetchedAt: Date.now(), games };
     }

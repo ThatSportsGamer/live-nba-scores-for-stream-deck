@@ -8,10 +8,10 @@
     "URL": "https://github.com/ThatSportsGamer/live-nba-scores-for-stream-deck",
     "Icon": "imgs/plugin-icon",
     "CategoryIcon": "imgs/category-icon",
-    "Version": "1.1.1.0",
+    "Version": "1.1.2.0",
     "SDKVersion": 3,
     "Software": {
-        "MinimumVersion": "6.9"
+        "MinimumVersion": "7.1"
     },
     "OS": [
         {
@@ -24,7 +24,7 @@
         }
     ],
     "Nodejs": {
-        "Version": "20",
+        "Version": "24",
         "Debug": "disabled"
     },
     "Actions": [
