@@ -2,6 +2,12 @@
 
 Full version history for Live NBA Scores, newest first. The [README](README.md) lists the three most recent updates.
 
+**v1.1.3.0**
+- Fixed: adding a new Scoreboard key next to an existing board no longer copies that board's league. New Scoreboard keys start with "Select A League", and changing one key only changes that key (keys placed side by side with the same settings still move together)
+- The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them (leave a gap between boards to keep them separate)
+- Team search now lists the best matches first: an exact abbreviation (try "NY" or "LA"), then names that start with what you typed, then names that contain it
+- Added a tip under "Send completed games to the end of the list" for smaller Stream Decks (Mini, Neo, a 15-key MK.2)
+
 **v1.1.2.0**
 - Fixed: "today" is now read in Eastern time, which is how ESPN dates its games. Outside the US the keys could ask for tomorrow's slate while tonight's games were still on. The day now changes at 5:00 AM Eastern (2:00 AM Pacific), so late games and their finals stay on the keys overnight everywhere
 - If ESPN stops responding for a moment, keys keep showing the last scores with a small amber dot instead of "Err" (after 10 minutes without an update they show "Err")

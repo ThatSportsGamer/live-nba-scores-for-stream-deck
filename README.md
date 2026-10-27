@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Two actions: **Live NBA Scores** tracks one team per key, and **Live NBA Scoreboard** fills your keys with today's games for a league. Keys update automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.2-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.3-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -31,6 +31,12 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 ## Recent Updates
 
+**v1.1.3.0**
+- Fixed: adding a new Scoreboard key next to an existing board no longer copies that board's league. New Scoreboard keys start with "Select A League", and changing one key only changes that key (keys placed side by side with the same settings still move together)
+- The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them (leave a gap between boards to keep them separate)
+- Team search now lists the best matches first: an exact abbreviation (try "NY" or "LA"), then names that start with what you typed, then names that contain it
+- Added a tip under "Send completed games to the end of the list" for smaller Stream Decks (Mini, Neo, a 15-key MK.2)
+
 **v1.1.2.0**
 - Fixed: "today" is now read in Eastern time, which is how ESPN dates its games. Outside the US the keys could ask for tomorrow's slate while tonight's games were still on. The day now changes at 5:00 AM Eastern (2:00 AM Pacific), so late games and their finals stay on the keys overnight everywhere
 - If ESPN stops responding for a moment, keys keep showing the last scores with a small amber dot instead of "Err" (after 10 minutes without an update they show "Err")
@@ -43,15 +49,6 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 - Off-day keys show your team's next game the same way: the "Next Game" label is gone, and the day line reads the weekday ("Thursday"), or the date when it's a week or more away
 - The Scoreboard's next-game-day keys (no games today) use the same layout
 - Long G League names (RCITY, VALLEY) shrink just enough to fit
-
-**v1.1.0.0**
-- New: **Live NBA Scoreboard** action — drag it onto as many keys as you like and they fill with today's games, one game per key, in tip-off order. Pick the league for each board: **NBA** (up to 15 keys), **WNBA** (up to 7) or **G League** (up to 15)
-- Same keys as the team action: lead-change and tie flashes with their cards (NY / UP 3, TIED / 88-88), the red crunch-time clock, and fireworks at the final
-- Each board remembers its own settings, so an NBA page and a G League page work, and boards with different settings can share a page; give each board its own background color to tell them apart
-- Fill top-to-bottom or left-to-right, and optionally send finished games to the end (recommended on smaller Stream Decks). More games than keys: the last key shows "+N more"; extra keys show "No Game". Both open ESPN's scoreboard for that league
-- The board moves to the next day at 2:00 AM, same as the team keys. On a day with no games, it shows the next game day's schedule with the day on each key
-- Final games now open ESPN's box score instead of Gamecast, on both actions
-- Neutral-site games (international games, the NBA Cup final) show "vs" instead of "@", on both actions
 
 Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 
@@ -159,7 +156,7 @@ Each **Live NBA Scoreboard** key is one of today's games, in tip-off order. The 
 - **Fill order:** top-to-bottom (default) or left-to-right. **Finals last:** optionally move finished games to the end
 - **Tip for smaller Stream Decks** (Mini, Neo, a 15-key MK.2): turn on finals last, so live and upcoming games keep their keys and finished games move to the `+N more` key.
 - **Day change:** the board keeps today's games until 5:00 AM Eastern (2:00 AM Pacific), then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines)
-- **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. A settings change applies to the whole board the key is part of. New Scoreboard keys start on the NBA
+- **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. A settings change applies to the whole board the key is part of. New Scoreboard keys start with "Select A League" until you pick one, and changing one key only changes that key (keys placed side by side with the same settings still move together)
 - **Multiple Stream Decks:** each deck (including a Virtual Stream Deck or Stream Deck Mobile) gets its own boards
 
 ---

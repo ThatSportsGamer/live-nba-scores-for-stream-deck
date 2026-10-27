@@ -77,11 +77,14 @@
 
 <label for="league">League</label>
 <select id="league">
+    <option value="">— Select a league —</option>
     <option value="nba">NBA (up to 15 keys)</option>
     <option value="wnba">WNBA (up to 7 keys)</option>
     <option value="gleague">G League (up to 15 keys)</option>
 </select>
-<div class="hint">Most nights need fewer keys. Extra keys show No Game; if you run short, the last key shows +N more.</div>
+<div class="hint" id="pickHint" style="display:none;">Pick what this key shows.</div>
+<div class="hint" id="countHint">Most nights need fewer keys. Extra keys show No Game; if you run short, the last key shows +N more.</div>
+<div class="hint" id="blockHint" style="display:none;"></div>
 
 <label for="sortOrder">Fill Order</label>
 <select id="sortOrder">
@@ -93,6 +96,7 @@
     <input type="checkbox" id="finalsLast">
     <label for="finalsLast">Send completed games to the end of the list</label>
 </div>
+<div class="hint" style="margin-top:-6px;">Tip for smaller Stream Decks (Mini, Neo, a 15-key MK.2): turn this on so live and upcoming games keep their keys and finished games move to +N more.</div>
 
 <label style="margin-top:4px;">Key Background</label>
 <div class="checkbox-row" style="margin-bottom:0;">
@@ -141,12 +145,16 @@
             try {
                 var data = JSON.parse(evt.data);
                 if (data.event === 'didReceiveSettings') applySettings((data.payload && data.payload.settings) || {});
+                if (data.event === 'sendToPropertyInspector') showBlock(data.payload && data.payload.boardKeys);
             } catch(e) {}
         };
     }
 
     function applySettings(s) {
-        document.getElementById('league').value    = s.league    || 'nba';
+        var lg = document.getElementById('league');
+        lg.value = s.league || '';
+        if (lg.value !== (s.league || '')) lg.value = '';   // unknown saved value -> blank
+        syncPick();
         document.getElementById('sortOrder').value = s.sortOrder || 'column';
         document.getElementById('finalsLast').checked = !!s.finalsLast;
         var on = !!s.bgColor;
@@ -158,8 +166,25 @@
         document.getElementById('bgControls').classList.toggle('disabled', !on);
     }
 
+    function showBlock(n) {
+        var el = document.getElementById('blockHint');
+        if (n > 1) {
+            el.textContent = 'This board has ' + n + ' keys. Changing any setting here changes all of them. To keep boards separate, leave a gap between them.';
+            el.style.display = '';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    function syncPick() {
+        var blank = !document.getElementById('league').value;
+        document.getElementById('pickHint').style.display  = blank ? '' : 'none';
+        document.getElementById('countHint').style.display = blank ? 'none' : '';
+    }
+
     function saveSettings() {
         if (!websocket || !piUUID) return;
+        syncPick();
         var settings = {
             league:     document.getElementById('league').value,
             sortOrder:  document.getElementById('sortOrder').value,
