@@ -1335,6 +1335,12 @@ function handleBoardEvent({ event, context, payload, device }) {
             boardOverflow.delete(context);
             clearKeyMemory(context);
             if (boardKeys.size === 0 && boardTimer) { clearTimeout(boardTimer); boardTimer = null; log('Scoreboard: no keys — timer stopped'); }
+            // Remaining keys re-flow right away (e.g. the last one becomes "+N more") instead of at the next poll.
+            // Debounced like willAppear, so a page or profile switch that removes every key does one no-op refresh.
+            else {
+                if (boardDebounce) clearTimeout(boardDebounce);
+                boardDebounce = setTimeout(() => { boardDebounce = null; refreshBoard(); }, 300);
+            }
             break;
         case 'didReceiveSettings':
         case 'sendToPlugin': {
