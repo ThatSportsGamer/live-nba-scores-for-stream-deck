@@ -2,6 +2,9 @@
 
 Full version history for Live NBA Scores, newest first. The [README](README.md) lists the three most recent updates.
 
+**v1.1.4.0**
+- Fixed: removing a key from a Scoreboard now updates the remaining keys right away instead of up to 30 seconds later. For example, delete one of three keys on a three-game board and the last key switches to "+N more" immediately
+
 **v1.1.3.0**
 - Fixed: adding a new Scoreboard key next to an existing board no longer copies that board's league. New Scoreboard keys start with "Select A League", and changing one key only changes that key (keys placed side by side with the same settings still move together)
 - The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them (leave a gap between boards to keep them separate)

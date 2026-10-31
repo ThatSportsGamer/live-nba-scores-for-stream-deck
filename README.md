@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Two actions: **Live NBA Scores** tracks one team per key, and **Live NBA Scoreboard** fills your keys with today's games for a league. Keys update automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.3-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.4-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -31,6 +31,9 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 ## Recent Updates
 
+**v1.1.4.0**
+- Fixed: removing a key from a Scoreboard now updates the remaining keys right away instead of up to 30 seconds later. For example, delete one of three keys on a three-game board and the last key switches to "+N more" immediately
+
 **v1.1.3.0**
 - Fixed: adding a new Scoreboard key next to an existing board no longer copies that board's league. New Scoreboard keys start with "Select A League", and changing one key only changes that key (keys placed side by side with the same settings still move together)
 - The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them (leave a gap between boards to keep them separate)
@@ -42,13 +45,6 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 - If ESPN stops responding for a moment, keys keep showing the last scores with a small amber dot instead of "Err" (after 10 minutes without an update they show "Err")
 - One odd game in ESPN's data no longer turns a whole Scoreboard to "Err"
 - Requires Stream Deck 7.1 or later
-
-**v1.1.1.0**
-- Pregame keys are easier to read: the teams stack on two lines (away team on top, "@ home" below, with a small "@") and the day and time get their own lines. On game day the day line goes away and the start time is shown larger. Same on team keys and Scoreboard keys
-- Games a week or more out show the date on the day line ("Sat 10/24"), with the time underneath
-- Off-day keys show your team's next game the same way: the "Next Game" label is gone, and the day line reads the weekday ("Thursday"), or the date when it's a week or more away
-- The Scoreboard's next-game-day keys (no games today) use the same layout
-- Long G League names (RCITY, VALLEY) shrink just enough to fit
 
 Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 
