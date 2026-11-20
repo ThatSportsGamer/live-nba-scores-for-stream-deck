@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys — **NBA, WNBA, and NBA G League**. Two actions: **Live NBA Scores** tracks one team per key, and **Live NBA Scoreboard** fills your keys with today's games for a league. Keys update automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.4-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.5-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -31,6 +31,9 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 ## Recent Updates
 
+**v1.1.5.0**
+- Shorter settings panels (the details are in the README), and the Scoreboard board hint is fixed: it now says how many touching keys a change applies to
+
 **v1.1.4.0**
 - Fixed: removing a key from a Scoreboard now updates the remaining keys right away instead of up to 30 seconds later. For example, delete one of three keys on a three-game board and the last key switches to "+N more" immediately
 
@@ -39,12 +42,6 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 - The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them
 - Team search now lists the best matches first: an exact abbreviation (try "NY" or "LA"), then names that start with what you typed, then names that contain it
 - Added a tip under "Send completed games to the end of the list" for smaller Stream Decks (Mini, Neo, a 15-key MK.2)
-
-**v1.1.2.0**
-- Fixed: "today" is now read in Eastern time, which is how ESPN dates its games. Outside the US the keys could ask for tomorrow's slate while tonight's games were still on. The day now changes at 5:00 AM Eastern (2:00 AM Pacific), so late games and their finals stay on the keys overnight everywhere
-- If ESPN stops responding for a moment, keys keep showing the last scores with a small amber dot instead of "Err" (after 10 minutes without an update they show "Err")
-- One odd game in ESPN's data no longer turns a whole Scoreboard to "Err"
-- Requires Stream Deck 7.1 or later
 
 Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 
