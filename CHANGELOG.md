@@ -4,6 +4,7 @@ Full version history for Live NBA Scores, newest first. The [README](README.md) 
 
 **v1.1.5.0**
 - Shorter settings panels (the details are in the README), and the Scoreboard board hint is fixed: it now says how many touching keys a change applies to
+- Behind the scenes: the code now says "key" instead of "button" throughout
 
 **v1.1.4.0**
 - Fixed: removing a key from a Scoreboard now updates the remaining keys right away instead of up to 30 seconds later. For example, delete one of three keys on a three-game board and the last key switches to "+N more" immediately
