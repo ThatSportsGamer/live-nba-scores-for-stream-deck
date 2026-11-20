@@ -290,7 +290,7 @@
 <div class="field" id="customLinkField" style="display: none;">
     <label for="customLinkInput">Custom URL</label>
     <input type="text" id="customLinkInput" placeholder="e.g. https://www.msgnetworks.com/live" autocomplete="off"/>
-    <div class="bg-hint">Opens ESPN Gamecast until the game actually starts, then this URL instead — handy for a regional sports network's live-game page or any other link you'd rather use. Keeps opening it for 30 minutes after the final buzzer, then reverts to Gamecast.</div>
+    <div class="bg-hint">Opens when the game starts, until 30 minutes after the final.</div>
 </div>
 
 <div class="field" style="margin-top: 16px;">
@@ -304,17 +304,11 @@
         <input type="range" id="bgOpacityInput" min="10" max="100" value="100"/>
         <span class="opacity-value" id="bgOpacityValue">100%</span>
     </div>
-    <div class="bg-hint">Score and status text is white (or gold/red) — lighter or brighter backgrounds can make it harder to read.</div>
+    <div class="bg-hint">Light colors can make the text hard to read.</div>
 </div>
 
 <div class="info-box">
-    <strong>How it works:</strong><br>
-    • Scores refresh every <strong>30 seconds</strong> (every 15 in the last 2:00 of the 4th quarter and overtime)<br>
-    • Shows score + quarter/clock during live games — the clock turns red in crunch time<br>
-    • The key flashes in the leading team's color on every <strong>lead change</strong> (with an UP n card showing the margin), and in the tying team's color when the game is <strong>tied</strong><br>
-    • Shows matchup and tip-off time before the game, and the next game on off days<br>
-    • Shows Final / Final/OT when the game ends<br>
-    • Covers NBA, WNBA, and G League — searching an NBA team also finds its G League affiliate
+    Refreshes every <strong>30 seconds</strong> (15 in crunch time). Covers the NBA, WNBA and G League.
 </div>
 
 <script>

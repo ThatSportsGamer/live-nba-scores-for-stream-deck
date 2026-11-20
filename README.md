@@ -36,7 +36,7 @@ A Stream Deck plugin that shows live basketball scores directly on your keys —
 
 **v1.1.3.0**
 - Fixed: adding a new Scoreboard key next to an existing board no longer copies that board's league. New Scoreboard keys start with "Select A League", and changing one key only changes that key (keys placed side by side with the same settings still move together)
-- The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them (leave a gap between boards to keep them separate)
+- The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them
 - Team search now lists the best matches first: an exact abbreviation (try "NY" or "LA"), then names that start with what you typed, then names that contain it
 - Added a tip under "Send completed games to the end of the list" for smaller Stream Decks (Mini, Neo, a 15-key MK.2)
 
@@ -152,7 +152,7 @@ Each **Live NBA Scoreboard** key is one of today's games, in tip-off order. The 
 - **Fill order:** top-to-bottom (default) or left-to-right. **Finals last:** optionally move finished games to the end
 - **Tip for smaller Stream Decks** (Mini, Neo, a 15-key MK.2): turn on finals last, so live and upcoming games keep their keys and finished games move to the `+N more` key.
 - **Day change:** the board keeps today's games until 5:00 AM Eastern (2:00 AM Pacific), then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines)
-- **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. A settings change applies to the whole board the key is part of. New Scoreboard keys start with "Select A League" until you pick one, and changing one key only changes that key (keys placed side by side with the same settings still move together)
+- **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. Keys with the same settings join one board even if they don't touch. A settings change covers the key and every touching key with the same settings, so leave a gap if you want to change one group on its own. New Scoreboard keys start with "Select A League" until you pick one, and changing one key only changes that key (keys placed side by side with the same settings still move together)
 - **Multiple Stream Decks:** each deck (including a Virtual Stream Deck or Stream Deck Mobile) gets its own boards
 
 ---
