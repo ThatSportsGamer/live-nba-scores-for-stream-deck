@@ -534,12 +534,13 @@ const CLUTCH_RED   = '#FF3B30';
 
 function buildLines(game, cfg) {
     const abbr = cfg.teamAbbr || leagueConf(cfg.league).label;
-    if (!game) return [abbr, 'No Game'];
+    if (!game) return offseasonLines(abbr);
 
     // Upcoming game (today, or the next one on an off day): stacked layout,
     // day line by calendar days — see pregameLines / pregameWhen.
     if (game.state === 'nextgame' || game.state === 'preview') {
         const when = game.startIso ? pregameWhen(game.startIso, new Date(), game.tbd || game.time === 'TBD') : { day: null, time: game.time };
+        if (game.pre) return pregameLines(game.awayAbbr, game.homeAbbr, game.neutral, null, null, preseasonDayLines(game, when));
         return pregameLines(game.awayAbbr, game.homeAbbr, game.neutral, when.day, when.time);
     }
     if (game.state === 'ppd')     return pregameLines(game.awayAbbr, game.homeAbbr, game.neutral, null, null, { text: 'PPD',   fs: 14, color: '#E74C3C' });
@@ -757,6 +758,17 @@ function etParts(ms) {
     for (const p of ET_FORMAT.formatToParts(new Date(ms))) o[p.type] = p.value;
     return { year: +o.year, month: +o.month, day: +o.day };
 }
+// Off days look ahead at most two weeks (same as Live MLB Scores); nothing in that
+// window = offseason. Keeps keys from showing a game months away all summer.
+const LOOKAHEAD_DAYS = 14;
+function lookaheadLimitYmd() {   // YYYYMMDD, two weeks past today's scoreboard date
+    const t = scoreboardDateStr();
+    const d = new Date(Date.UTC(+t.slice(0, 4), +t.slice(4, 6) - 1, +t.slice(6, 8) + LOOKAHEAD_DAYS));
+    return d.toISOString().slice(0, 10).replace(/-/g, '');
+}
+// ISO date → YYYYMMDD in ET, so an evening game isn't pushed to the next UTC day.
+const etYmd = iso => { const p = etParts(Date.parse(iso)); return p.year + String(p.month).padStart(2, '0') + String(p.day).padStart(2, '0'); };
+
 function scoreboardDateStr() {
     if (DEBUG_ANCHOR_DATE) return DEBUG_ANCHOR_DATE.replace(/-/g, '');
     const p = etParts(Date.now() - DAY_ROLLOVER_ET_HOUR * 3600e3);
@@ -836,7 +848,8 @@ function parseEvent(e, league) {
     const gcLink = (e.links || []).find(l => (l.text || '').toLowerCase() === 'gamecast') || (e.links || [])[0];
     const link   = gcLink?.href || `https://www.espn.com/${leagueConf(league).web}/game/_/gameId/${e.id}`;
 
-    const base = { matchup, awayId, homeId, awayAbbr, homeAbbr, neutral: !!comp.neutralSite, eventId: e.id, link, startMs: Date.parse(e.date), startIso: e.date };
+    const base = { matchup, awayId, homeId, awayAbbr, homeAbbr, neutral: !!comp.neutralSite, eventId: e.id, link, startMs: Date.parse(e.date), startIso: e.date,
+        pre: e.season?.type === 1 || e.seasonType?.type === 1 };   // preseason (scoreboard: season.type; team schedule: seasonType.type)
 
     if (name.includes('POSTPONED') || name.includes('CANCEL') || name.includes('SUSPENDED')) return { ...base, state: 'ppd' };
     if (/DELAY/.test(name)) return { ...base, state: 'delay' };
@@ -908,6 +921,7 @@ async function findNextGame(league, teamId) {
         if (next) break; // the default (current season type) is always the soonest when it has one
     }
     if (!next) { log(league.toUpperCase(), 'no upcoming games for', teamId); return null; }
+    if (etYmd(next.date) > lookaheadLimitYmd()) { log(league.toUpperCase(), 'next game for', teamId, 'is past two weeks — Offseason'); return null; }
 
     const game = parseEvent(next, league);
     const d    = new Date(next.date);
@@ -1027,6 +1041,37 @@ function resolveBgColor(cfg) {
 // (Windows + XL, Mac + Mini) with a separate font-test plugin, 2026-10-17.
 const PRE_TEAM_FS = 16, PRE_AT_FS = 10, PRE_DAY_FS = 11.5, PRE_TIME_FS = 11.5, PRE_GAMEDAY_TIME_FS = 14;
 const PRE_SPACING = 1.12, PRE_DAY_COLOR = '#BBBBBB', PRE_MAX_W = 66;
+const PRESEASON_COLOR = '#2ECC71';   // preseason day line (same green as Live MLB Scores' spring training line)
+
+// Offseason: nothing left on the schedule in the next two weeks (LOOKAHEAD_DAYS). The team (or the board's
+// league) over a gray "Offseason", in place of the old "No Game". A long
+// name with a space goes on two lines rather than shrinking past readable.
+function offseasonLines(name) {
+    const fit = (t, max) => { let fs = max; while (fs > 9 && preWidth(t, fs) > PRE_MAX_W) fs -= 0.5; return fs; };
+    const words = String(name).split(' ');
+    if (words.length > 1 && fit(name, 18) < 12) {
+        const mid = Math.ceil(words.length / 2);
+        const a = words.slice(0, mid).join(' '), b = words.slice(mid).join(' ');
+        const fs = Math.min(fit(a, 16), fit(b, 16));
+        return [{ text: a, fs }, { text: b, fs }, { text: 'Offseason', fs: PRE_DAY_FS, color: PRE_DAY_COLOR }];
+    }
+    return [{ text: name, fs: fit(name, 18) }, { text: 'Offseason', fs: PRE_DAY_FS, color: PRE_DAY_COLOR }];
+}
+
+// Preseason day line, in green: "PRE Today" on game day, "PRE Sun" within the week,
+// "PRE 11/22" further out (T.J., 2026-11-21: "PRE Sun 11/22" is too wide).
+function preseasonDayLines(game, when) {
+    let label = 'PRE Today';
+    if (when.day) {
+        try {
+            const d = new Date(game.startIso);
+            label = 'PRE ' + (when.day.includes(' ')
+                ? d.toLocaleDateString([], { month: 'numeric', day: 'numeric' })
+                : d.toLocaleDateString([], { weekday: 'short' }));
+        } catch (e) { label = 'PRE'; }
+    }
+    return [{ text: label, fs: PRE_DAY_FS, color: PRESEASON_COLOR }, { text: when.time, fs: PRE_TIME_FS }];
+}
 // Helvetica-Bold advance widths (per 1000 em) — only used to shrink a team line
 // that can't fit at 16 (e.g. G League's RCITY / VALLEY); unknown glyphs count wide.
 const PRE_GLYPHS = {
@@ -1034,7 +1079,10 @@ const PRE_GLYPHS = {
     J: 556, K: 722, L: 611, M: 889, N: 722, O: 778, P: 667, Q: 778, R: 722,
     S: 667, T: 611, U: 722, V: 667, W: 944, X: 667, Y: 667, Z: 611,
     0: 556, 1: 556, 2: 556, 3: 556, 4: 556, 5: 556, 6: 556, 7: 556, 8: 556, 9: 556,
-    '&': 778, '-': 333, '.': 278, '@': 975, v: 556, s: 556, ' ': 278,
+    '&': 778, '-': 333, '.': 278, '@': 975, ' ': 278,
+    // lowercase + slash (Helvetica Bold) for "Offseason", league names and the PRE day line
+    '/': 278, a: 556, b: 611, c: 556, d: 611, e: 556, f: 333, g: 611, h: 611, i: 278, j: 278, k: 556, l: 278, m: 889,
+    n: 611, o: 611, p: 611, q: 611, r: 389, s: 556, t: 333, u: 611, v: 556, w: 778, x: 556, y: 556, z: 500,
 };
 function preWidth(str, fs) {
     let u = 0;
@@ -1072,8 +1120,9 @@ function pregameLines(awayAbbr, homeAbbr, neutral, day, time, last) {
         { text: awayAbbr, fs: preFitFs(0, awayAbbr) },
         { home: homeAbbr, pre, afs: PRE_AT_FS, fs: preFitFs(preWidth(pre + ' ', PRE_AT_FS), homeAbbr) },
     ];
-    if (last)     lines.push(last);
-    else if (day) lines.push({ text: day, fs: PRE_DAY_FS, color: PRE_DAY_COLOR }, { text: time, fs: PRE_TIME_FS });
+    if (Array.isArray(last)) lines.push(...last);
+    else if (last) lines.push(last);
+    else if (day)  lines.push({ text: day, fs: PRE_DAY_FS, color: PRE_DAY_COLOR }, { text: time, fs: PRE_TIME_FS });
     else          lines.push({ text: time, fs: PRE_GAMEDAY_TIME_FS });
     lines.spacing = PRE_SPACING;
     return lines;
@@ -1414,7 +1463,7 @@ async function fetchBoardDay(league) {
         const cached = nextDayCache[league];
         if (cached && cached.today === today && Date.now() - cached.fetchedAt < NEXT_DAY_TTL_MS) return cached.games;
         const cal  = (data?.leagues?.[0]?.calendar || []).map(c => String(typeof c === 'string' ? c : (c && (c.startDate || c.value)) || '').slice(0, 10).replace(/-/g, ''));
-        const next = cal.filter(d => /^\d{8}$/.test(d) && d > today).sort()[0];
+        const next = cal.filter(d => /^\d{8}$/.test(d) && d > today && d <= lookaheadLimitYmd()).sort()[0];   // two weeks at most
         if (next) {
             const nd = await fetchJson(ESPN_BASE + leagueConf(league).api + '/scoreboard?dates=' + next + '&limit=100');
             games = parseEvents(nd?.events, league); // the keys show the day themselves (pregameLines)
@@ -1468,6 +1517,7 @@ async function refreshBoard() {
             const sorted = sortBoardKeys(b.keys.slice(), st.sortOrder);
             if (!day) { for (const ctx of sorted) if (!flashing.has(ctx)) setKey(ctx, [leagueConf(st.league).label, 'Err'], undefined, resolveBgColor(cfg)); continue; }
             const games = boardGameList(day, st);
+            if (!games.length) { sorted.forEach((ctx, i) => renderBoardOffseason(ctx, i === 0, leagueConf(st.league).label, cfg)); continue; }
             allGames.push(...games);
             const over  = games.length > sorted.length;
             const slots = over ? sorted.length - 1 : sorted.length;
@@ -1489,6 +1539,15 @@ async function refreshBoard() {
         boardRefreshing = false;
         scheduleBoard();
     }
+}
+
+// Offseason board: the first key names the league over "Offseason", the rest go
+// blank (a press still opens the league's scores page).
+function renderBoardOffseason(context, first, label, cfg) {
+    if (flashing.has(context)) return;
+    boardSlotGame.set(context, null);
+    prevLeader.delete(context); prevState.delete(context);
+    setKey(context, first ? offseasonLines(label) : [{ text: '', fs: 16 }], 1.4, resolveBgColor(cfg));
 }
 
 function renderBoardKey(context, game, cfg) {
