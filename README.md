@@ -4,7 +4,7 @@
 
 A Stream Deck plugin that shows live basketball scores directly on your keys—**NBA, WNBA, and NBA G League**. Two actions: **Live NBA Scores** tracks one team per key, and **Live NBA Scoreboard** fills your keys with today's games for a league. Keys update automatically every 30 seconds.
 
-![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.5-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
+![Live NBA Scores Plugin](https://img.shields.io/badge/Stream%20Deck-Plugin-blue) ![Version](https://img.shields.io/badge/version-1.1.6-green) [![Elgato Marketplace](https://img.shields.io/badge/Elgato-Marketplace-black)](https://marketplace.elgato.com/product/live-nba-scores-8f051659-5306-4f5f-b1ff-c91aa8ecc0ea)
 
 ---
 
@@ -18,7 +18,7 @@ A Stream Deck plugin that shows live basketball scores directly on your keys—*
 - **Lead-change and tie flash:** when the lead flips, the key blinks in the new leader's color and shows a short card with the margin (NY / UP 3); when the game gets tied, it blinks in the tying team's color and shows TIED / 88-88 (basketball scores change too often to flash on every basket)
 - **End-of-game fireworks:** a short celebration in the winning team's colors when the game goes final
 - **Pregame:** the two teams stacked (`BOS` over `@ NY`) and the tip-off time; on off days, your team's next game with its day and time
-- **Off days:** shows your team's next scheduled game (matchup, date, and time) instead of a dead-end "No Game"
+- **Off days:** shows your team's next scheduled game (matchup, date, and time) up to two weeks out; past that, the team over "Offseason"
 - **Final scores:** "Final", "Final/OT", or "Final/2OT"
 - **Gamecast shortcut:** press any key to open that game in ESPN Gamecast (the box score once the game is final)
 - **Custom link:** optionally send key presses to a link of your choice (like a regional broadcast page) once the game has started
@@ -31,18 +31,17 @@ A Stream Deck plugin that shows live basketball scores directly on your keys—*
 
 ## Recent Updates
 
+**v1.1.6.0**
+- New: preseason games get a green PRE day line: "PRE Today" on game day, "PRE Sun" within the week, and "PRE 10/5" further out. Works for the NBA, WNBA, and G League
+- New: in the offseason, a team key shows the team over "Offseason" instead of "No Game". Off days now look ahead two weeks for the next game (it used to show the next game however far out); nothing in that window counts as the offseason
+- New: an offseason Scoreboard shows the league over "Offseason" on its first key, with the rest blank
+
 **v1.1.5.0**
 - Shorter settings panels (the details are in the README), and the Scoreboard board hint is fixed: it now says how many touching keys a change applies to
 - Behind the scenes: the code now says "key" instead of "button" throughout
 
 **v1.1.4.0**
 - Fixed: removing a key from a Scoreboard now updates the remaining keys right away instead of up to 30 seconds later. For example, delete one of three keys on a three-game board and the last key switches to "+N more" immediately
-
-**v1.1.3.0**
-- Fixed: adding a new Scoreboard key next to an existing board no longer copies that board's league. New Scoreboard keys start with "Select A League", and changing one key only changes that key (keys placed side by side with the same settings still move together)
-- The Scoreboard settings panel now tells you how many keys are in the board you're editing, since changing a setting changes all of them
-- Team search now lists the best matches first: an exact abbreviation (try "NY" or "LA"), then names that start with what you typed, then names that contain it
-- Added a tip under "Send completed games to the end of the list" for smaller Stream Decks (Mini, Neo, a 15-key MK.2)
 
 Older updates: see the full version history in [CHANGELOG.md](CHANGELOG.md).
 
@@ -130,10 +129,18 @@ Thursday
 7:30 PM
 ```
 
-**No game scheduled at all** (true offseason, before next season's schedule is out):
+**Preseason** (a green PRE day line: `PRE Today`, the weekday within the week, or the date further out):
+```
+BOS
+@ NY
+PRE Sun
+7:30 PM
+```
+
+**Offseason** (nothing scheduled in the next two weeks):
 ```
  NY
-No Game
+Offseason
 ```
 Pressing the key in this state opens the team's schedule on ESPN.
 
@@ -149,7 +156,7 @@ Each **Live NBA Scoreboard** key is one of today's games, in tip-off order. The 
 - **More games than keys:** the last key shows `+N more`. **More keys than games:** the extra keys show `No Game`. Pressing either opens ESPN's scoreboard for that league
 - **Fill order:** top-to-bottom (default) or left-to-right. **Finals last:** optionally move finished games to the end
 - **Tip for smaller Stream Decks** (Mini, Neo, a 15-key MK.2): turn on finals last, so live and upcoming games keep their keys and finished games move to the `+N more` key.
-- **Day change:** the board keeps today's games until 5:00 AM Eastern (2:00 AM Pacific), then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines)
+- **Day change:** the board keeps today's games until 5:00 AM Eastern (2:00 AM Pacific), then moves to the next day. On a day with no games it shows the next game day's schedule (each key shows the day and time on their own lines). It looks two weeks ahead at most; with nothing in that window, the first key shows the league over `Offseason` and the rest go blank.
 - **Multiple boards:** each key remembers its own settings, so different pages can show different leagues, and boards can share a page too: give each its own background color to tell them apart. Keys with the same settings join one board even if they don't touch. A settings change covers the key and every touching key with the same settings, so leave a gap if you want to change one group on its own. New Scoreboard keys start with "Select A League" until you pick one, and changing one key only changes that key (keys placed side by side with the same settings still move together)
 - **Multiple Stream Decks:** each deck (including a Virtual Stream Deck or Stream Deck Mobile) gets its own boards
 

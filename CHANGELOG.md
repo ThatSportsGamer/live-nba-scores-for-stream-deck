@@ -2,6 +2,11 @@
 
 Full version history for Live NBA Scores, newest first. The [README](README.md) lists the three most recent updates.
 
+**v1.1.6.0**
+- New: preseason games get a green PRE day line: "PRE Today" on game day, "PRE Sun" within the week, and "PRE 10/5" further out. Works for the NBA, WNBA, and G League
+- New: in the offseason, a team key shows the team over "Offseason" instead of "No Game". Off days now look ahead two weeks for the next game (it used to show the next game however far out); nothing in that window counts as the offseason
+- New: an offseason Scoreboard shows the league over "Offseason" on its first key, with the rest blank
+
 **v1.1.5.0**
 - Shorter settings panels (the details are in the README), and the Scoreboard board hint is fixed: it now says how many touching keys a change applies to
 - Behind the scenes: the code now says "key" instead of "button" throughout
